@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="description" content="九九の計算カードで楽しく学べる算数アプリ。カード練習・クイズ・ふたりで対戦・きろくスタンプで九九をマスターしよう!" />
+  <meta name="theme-color" content="#f59e0b" />
+  <title>九九カード - かけざんアプリ</title>
+
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="九九カード" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+
+  <!-- ===== 共通ヘッダー ===== -->
+  <header class="app-header" id="app-header">
+    <button class="brand" id="btn-brand" aria-label="ホームにもどる">
+      <span class="brand-icon">🃏</span>
+      <span class="brand-name">九九カード</span>
+    </button>
+    <div class="header-right">
+      <span class="chip chip-streak" id="chip-streak" hidden>🔥 <b id="streak-num">0</b>日</span>
+      <button class="chip chip-install" id="btn-install" hidden>📲 インストール</button>
+    </div>
+  </header>
+
+  <main id="app">
+
+    <!-- ===== ホーム画面 ===== -->
+    <section class="screen active" id="screen-home">
+      <div class="home-hero">
+        <p class="home-greet" id="home-greet">きょうも 九九を れんしゅうしよう!</p>
+        <div class="home-today" id="home-today"></div>
+      </div>
+
+      <div class="mode-grid">
+        <button class="mode-card mode-flash" data-mode="flash">
+          <span class="mode-emoji">🃏</span>
+          <span class="mode-title">カードで<br>れんしゅう</span>
+          <span class="mode-desc">めくって おぼえよう</span>
+        </button>
+        <button class="mode-card mode-quiz" data-mode="quiz">
+          <span class="mode-emoji">✏️</span>
+          <span class="mode-title">こたえて<br>クイズ</span>
+          <span class="mode-desc">すうじで こたえよう</span>
+        </button>
+        <button class="mode-card mode-pair" data-mode="pair">
+          <span class="mode-emoji">👫</span>
+          <span class="mode-title">ふたりで<br>もんだい</span>
+          <span class="mode-desc">おともだちと しょうぶ!</span>
+        </button>
+        <button class="mode-card mode-records" data-mode="records">
+          <span class="mode-emoji">🏆</span>
+          <span class="mode-title">きろく・<br>スタンプ</span>
+          <span class="mode-desc">がんばりを みてみよう</span>
+        </button>
+      </div>
+
+      <button class="weak-banner" id="btn-weak" hidden>
+        <span class="weak-emoji">💪</span>
+        <span class="weak-text"><b id="weak-count">0</b>まいの「にがてカード」があるよ。れんしゅうする?</span>
+        <span class="weak-arrow">→</span>
+      </button>
+    </section>
+
+    <!-- ===== 設定画面(モード共通) ===== -->
+    <section class="screen" id="screen-setup">
+      <div class="setup-head">
+        <button class="btn-back" data-back="home">← もどる</button>
+        <h2 class="setup-title" id="setup-title">カードでれんしゅう</h2>
+      </div>
+
+      <div class="panel">
+        <div class="panel-label">れんしゅうする「だん」をえらんでね <small>(いくつでも えらべるよ)</small></div>
+        <div class="stage-grid" id="stage-grid"></div>
+        <div class="stage-tools">
+          <button class="btn-mini" id="btn-all-stages">ぜんぶえらぶ</button>
+          <button class="btn-mini" id="btn-clear-stages">1つにする</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-label">カードのじゅんばん</div>
+        <div class="segment" id="order-segment">
+          <button class="seg-btn" data-order="asc">⬇️ 上から<br><small>1→9のじゅん</small></button>
+          <button class="seg-btn" data-order="desc">⬆️ 下から<br><small>9→1のじゅん</small></button>
+          <button class="seg-btn" data-order="random">🔀 バラバラ<br><small>まぜまぜ</small></button>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-face">
+        <div class="panel-label">カードのむき</div>
+        <div class="segment" id="face-segment">
+          <button class="seg-btn" data-face="front">🔢 しき → こたえ<br><small>「2×3」をみて こたえる</small></button>
+          <button class="seg-btn" data-face="back">💡 こたえ → しき<br><small>「6」をみて しきをあてる</small></button>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-count" hidden>
+        <div class="panel-label">もんだいのかず</div>
+        <div class="segment" id="count-segment">
+          <button class="seg-btn" data-count="10">10もん</button>
+          <button class="seg-btn" data-count="20">20もん</button>
+          <button class="seg-btn" data-count="all">ぜんぶ</button>
+        </div>
+      </div>
+
+      <div class="panel panel-row" id="panel-kana">
+        <div>
+          <div class="panel-label" style="margin:0">となえかた(ふりがな)</div>
+          <small class="panel-sub">こたえのカードに「にさんが ろく」とひょうじ</small>
+        </div>
+        <button class="toggle" id="toggle-kana" role="switch" aria-checked="true" aria-label="ふりがな表示"><span class="knob"></span></button>
+      </div>
+
+      <div class="pair-hint" id="pair-hint" hidden>
+        <p><b>👫 あそびかた</b></p>
+        <ol>
+          <li>じゅんばんに もんだいに こたえるよ。</li>
+          <li>こたえたら、カードをタップして こたえあわせ。</li>
+          <li>あいてが「◯せいかい」「✕ざんねん」をおしてね。</li>
+          <li>おおく せいかいした ほうの かち!</li>
+        </ol>
+      </div>
+
+      <button class="btn-start" id="btn-start">はじめる!<span class="start-count" id="start-count"></span></button>
+    </section>
+
+    <!-- ===== カード練習画面 ===== -->
+    <section class="screen screen-play" id="screen-flash">
+      <div class="play-top">
+        <button class="btn-close" data-quit>✕</button>
+        <div class="play-progress">
+          <div class="progress-text" id="flash-progress-text"></div>
+          <div class="progress-bar"><div class="progress-fill" id="flash-progress-fill"></div></div>
+        </div>
+        <button class="btn-sound" id="btn-sound-flash" aria-label="おと">🔊</button>
+      </div>
+
+      <div class="card-arena" id="card-arena">
+        <div class="swipe-label swipe-label-left" id="label-again">🔁 もういちど</div>
+        <div class="swipe-label swipe-label-right" id="label-good">⭕ できた!</div>
+        <div class="card-stack" id="card-stack"></div>
+      </div>
+
+      <p class="play-hint">カードをタップでめくる・左右にスワイプでしわけ</p>
+
+      <div class="play-controls">
+        <button class="ctl-btn ctl-again" id="btn-again">🔁<span>もういちど</span></button>
+        <button class="ctl-btn ctl-flip" id="btn-flip">🔄<span>めくる</span></button>
+        <button class="ctl-btn ctl-good" id="btn-good">⭕<span>できた!</span></button>
+      </div>
+    </section>
+
+    <!-- ===== クイズ画面 ===== -->
+    <section class="screen screen-play" id="screen-quiz">
+      <div class="play-top">
+        <button class="btn-close" data-quit>✕</button>
+        <div class="play-progress">
+          <div class="progress-text" id="quiz-progress-text"></div>
+          <div class="progress-bar"><div class="progress-fill" id="quiz-progress-fill"></div></div>
+        </div>
+        <div class="quiz-timer" id="quiz-timer">0:00</div>
+      </div>
+
+      <div class="quiz-body">
+        <div class="quiz-problem-wrap">
+          <div class="quiz-problem" id="quiz-problem">2 × 3 = ?</div>
+          <div class="quiz-answer-box" id="quiz-answer-box">&nbsp;</div>
+          <div class="quiz-feedback" id="quiz-feedback"></div>
+        </div>
+
+        <div class="keypad" id="keypad">
+          <button class="key" data-key="7">7</button>
+          <button class="key" data-key="8">8</button>
+          <button class="key" data-key="9">9</button>
+          <button class="key" data-key="4">4</button>
+          <button class="key" data-key="5">5</button>
+          <button class="key" data-key="6">6</button>
+          <button class="key" data-key="1">1</button>
+          <button class="key" data-key="2">2</button>
+          <button class="key" data-key="3">3</button>
+          <button class="key key-del" data-key="del">⌫</button>
+          <button class="key" data-key="0">0</button>
+          <button class="key key-ok" data-key="ok">OK</button>
+        </div>
+        <button class="btn-next-q" id="btn-next-q" hidden>つぎへ →</button>
+      </div>
+    </section>
+
+    <!-- ===== ふたりで対戦画面 ===== -->
+    <section class="screen screen-play" id="screen-pair">
+      <div class="play-top">
+        <button class="btn-close" data-quit>✕</button>
+        <div class="pair-scores">
+          <div class="pair-score pair-p1" id="pair-score-1"><span class="pp-icon">🍎</span><span class="pp-name">プレイヤー1</span><b class="pp-pts" id="pair-pts-1">0</b></div>
+          <div class="pair-score pair-p2" id="pair-score-2"><span class="pp-icon">🍊</span><span class="pp-name">プレイヤー2</span><b class="pp-pts" id="pair-pts-2">0</b></div>
+        </div>
+      </div>
+
+      <div class="pair-turn" id="pair-turn">🍎 プレイヤー1の ばん!</div>
+
+      <div class="card-arena card-arena-pair">
+        <div class="card-stack" id="pair-card-stack"></div>
+      </div>
+
+      <p class="play-hint" id="pair-hint-text">こえに だして こたえてから、カードをタップ!</p>
+
+      <div class="pair-judge" id="pair-judge" hidden>
+        <p class="judge-ask">あっていたかな? <small>(あいてが おしてね)</small></p>
+        <div class="judge-btns">
+          <button class="judge-btn judge-ok" id="btn-judge-ok">⭕ せいかい!</button>
+          <button class="judge-btn judge-ng" id="btn-judge-ng">✕ ざんねん</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 結果画面 ===== -->
+    <section class="screen" id="screen-result">
+      <canvas id="confetti" class="confetti"></canvas>
+      <div class="result-card">
+        <div class="result-emoji" id="result-emoji">🎉</div>
+        <h2 class="result-title" id="result-title">よくがんばりました!</h2>
+        <div class="result-stats" id="result-stats"></div>
+        <div class="result-wrong" id="result-wrong" hidden>
+          <p class="rw-label">まちがえたカード(ふくしゅうしよう)</p>
+          <div class="rw-list" id="rw-list"></div>
+        </div>
+        <div class="result-btns">
+          <button class="btn-secondary" id="btn-retry">🔁 もういちど</button>
+          <button class="btn-secondary" id="btn-weak-practice" hidden>💪 にがてをれんしゅう</button>
+          <button class="btn-primary" id="btn-result-home">🏠 ホームへ</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== きろく画面 ===== -->
+    <section class="screen" id="screen-records">
+      <div class="setup-head">
+        <button class="btn-back" data-back="home">← もどる</button>
+        <h2 class="setup-title">きろく・スタンプ</h2>
+      </div>
+
+      <div class="panel records-hero">
+        <div class="rec-stat"><span class="rec-num" id="rec-streak">0</span><span class="rec-label">🔥 れんぞく日すう</span></div>
+        <div class="rec-stat"><span class="rec-num" id="rec-total">0</span><span class="rec-label">🃏 めくったカード</span></div>
+        <div class="rec-stat"><span class="rec-num" id="rec-master">0<small>/81</small></span><span class="rec-label">⭐ マスターした九九</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-label">📅 スタンプカレンダー <small>(れんしゅうした日にスタンプ!)</small></div>
+        <div class="cal-weekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+        <div class="calendar" id="calendar"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-label">🗺️ 九九マスターマップ <small>(みどり=マスター!)</small></div>
+        <div class="heatmap" id="heatmap"></div>
+        <div class="heat-legend">
+          <span><i class="hl hl-0"></i>まだ</span>
+          <span><i class="hl hl-1"></i>れんしゅうちゅう</span>
+          <span><i class="hl hl-2"></i>もうすこし</span>
+          <span><i class="hl hl-3"></i>マスター!</span>
+        </div>
+        <div class="heat-detail" id="heat-detail"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-label">🎖️ メダル</div>
+        <div class="badges" id="badges"></div>
+      </div>
+
+      <button class="btn-start" id="btn-weak2" hidden>💪 にがてカードをれんしゅうする</button>
+
+      <button class="btn-danger" id="btn-reset-data">きろくをぜんぶけす</button>
+    </section>
+
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
