@@ -11,6 +11,10 @@ import { sfx, speak, setSoundEnabled, isSoundEnabled } from './audio.js';
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 
+// SVGスプライトのアイコンを生成
+const icon = (name, cls = '') =>
+  `<svg class="icon ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+
 store.load();
 setSoundEnabled(store.data.settings.sound);
 
@@ -71,9 +75,9 @@ function renderHome() {
 let currentMode = 'flash'; // flash | quiz | pair
 
 const MODE_TITLES = {
-  flash: '🃏 カードでれんしゅう',
-  quiz: '✏️ こたえてクイズ',
-  pair: '👫 ふたりでもんだい',
+  flash: 'カードでれんしゅう',
+  quiz: 'こたえてクイズ',
+  pair: 'ふたりでもんだい',
 };
 
 function openSetup(mode) {
@@ -206,7 +210,7 @@ function cardEl(card, { face = 'front', kana = true } = {}) {
       <div class="kface kface-front">
         <div class="kface-top">
           <span class="ktag">${card.a}のだん</span>
-          <span class="khint">タップで こたえ 👆</span>
+          <span class="khint">タップで こたえ</span>
         </div>
         <div class="kmain">${frontMain}</div>
         <div class="kfoot">おもて</div>
@@ -214,7 +218,7 @@ function cardEl(card, { face = 'front', kana = true } = {}) {
       <div class="kface kface-back">
         <div class="kface-top">
           <span class="ktag">こたえ</span>
-          <button class="kspeak" aria-label="よみあげ">🔊</button>
+          <button class="kspeak" aria-label="よみあげ">${icon('sound')}</button>
         </div>
         <div class="kmain">${backMain}</div>
         <div class="kfoot">うら</div>
@@ -319,7 +323,8 @@ function finishFlash() {
   const sec = Math.round((performance.now() - flash.t0) / 1000);
   const missed = [...flash.missed];
   showResult({
-    emoji: missed.length === 0 ? '🏆' : '🎉',
+    icon: missed.length === 0 ? 'trophy' : 'star',
+    tone: missed.length === 0 ? '' : 'tone-green',
     title: missed.length === 0 ? 'ぜんぶ できた! すごい!' : 'さいごまで がんばったね!',
     stats: [
       { num: flash.total, label: 'できたカード' },
@@ -393,7 +398,7 @@ $('#btn-sound-flash').addEventListener('click', () => {
   setSoundEnabled(on);
   store.data.settings.sound = on;
   store.save();
-  $('#btn-sound-flash').textContent = on ? '🔊' : '🔇';
+  $('#btn-sound-flash').innerHTML = icon(on ? 'sound' : 'sound-off');
   toast(on ? 'おとを オンにしたよ' : 'おとを オフにしたよ');
 });
 
@@ -468,7 +473,7 @@ function checkQuizAnswer() {
   if (ok) {
     quiz.correct++;
     box.classList.add('correct');
-    $('#quiz-feedback').innerHTML = '<span class="fb-ok">⭕ せいかい!</span>';
+    $('#quiz-feedback').innerHTML = `<span class="fb-ok">${icon('circle')} せいかい!</span>`;
     sfx.correct();
     setTimeout(nextQuizQuestion, 700);
   } else {
@@ -518,7 +523,8 @@ function finishQuiz() {
   const wrongKeys = [...new Set(quiz.wrong)];
   const qs = quiz.qs;
   showResult({
-    emoji: perfect ? '💯' : quiz.correct >= total * 0.7 ? '🎉' : '💪',
+    icon: perfect ? 'trophy' : quiz.correct >= total * 0.7 ? 'star' : 'target',
+    tone: perfect ? '' : quiz.correct >= total * 0.7 ? 'tone-green' : 'tone-sky',
     title: perfect
       ? (newRecord ? 'パーフェクト! しんきろく!' : 'パーフェクト! すごい!')
       : quiz.correct >= total * 0.7 ? 'よくできました!' : 'つぎは もっとできるよ!',
@@ -559,11 +565,13 @@ function startPair(deck) {
 
 function renderPair() {
   const card = pair.deck[pair.i];
+  const remain = pair.deck.length - pair.i;
   $('#pair-pts-1').textContent = pair.scores[0];
   $('#pair-pts-2').textContent = pair.scores[1];
   $('#pair-score-1').classList.toggle('turn', pair.turn === 0);
   $('#pair-score-2').classList.toggle('turn', pair.turn === 1);
-  $('#pair-turn').textContent = pair.turn === 0 ? '🍎 プレイヤー1の ばん!' : '🍊 プレイヤー2の ばん!';
+  $('#pair-turn').innerHTML =
+    `<span class="pp-dot pp-dot-${pair.turn + 1}"></span> プレイヤー${pair.turn + 1}の ばん! (のこり${remain}まい)`;
   $('#pair-hint-text').textContent = 'こえに だして こたえてから、カードをタップ!';
   $('#pair-judge').hidden = true;
   pair.flipped = false;
@@ -582,9 +590,6 @@ function renderPair() {
     $('#pair-hint-text').textContent = 'こたえは あっていたかな?';
   });
   stack.appendChild(el);
-
-  const remain = pair.deck.length - pair.i;
-  $('#pair-turn').textContent += ` (のこり${remain}まい)`;
 }
 
 function judgePair(ok) {
@@ -610,14 +615,15 @@ function judgePair(ok) {
 
 function finishPair() {
   const [p1, p2] = pair.scores;
-  const winner = p1 === p2 ? null : p1 > p2 ? '🍎 プレイヤー1' : '🍊 プレイヤー2';
+  const winner = p1 === p2 ? null : p1 > p2 ? 'プレイヤー1' : 'プレイヤー2';
   const deck = pair.deck;
   showResult({
-    emoji: winner ? '👑' : '🤝',
+    icon: winner ? 'crown' : 'users',
+    tone: winner ? '' : 'tone-sky',
     title: winner ? `${winner}の かち!` : 'ひきわけ! いいしょうぶ!',
     stats: [
-      { num: p1, label: '🍎 プレイヤー1' },
-      { num: p2, label: '🍊 プレイヤー2' },
+      { num: p1, label: 'プレイヤー1' },
+      { num: p2, label: 'プレイヤー2' },
     ],
     wrongKeys: [],
     celebrate: true,
@@ -634,8 +640,10 @@ $('#btn-judge-ng').addEventListener('click', () => judgePair(false));
 // ==========================================================
 let lastRetry = null;
 
-function showResult({ emoji, title, stats, wrongKeys, celebrate, retry }) {
-  $('#result-emoji').textContent = emoji;
+function showResult({ icon: iconName, tone = '', title, stats, wrongKeys, celebrate, retry }) {
+  const iconBox = $('#result-icon');
+  iconBox.className = `result-icon ${tone}`;
+  iconBox.innerHTML = icon(iconName);
   $('#result-title').textContent = title;
   $('#result-stats').innerHTML = stats.map((s) =>
     `<div class="rs-item"><span class="rs-num">${s.num}</span><span class="rs-label">${s.label}</span></div>`
@@ -706,7 +714,7 @@ function renderCalendar() {
     const isFuture = i < 0;
     const stamped = !isFuture && store.data.days[key];
     cell.className = 'cal-day' + (stamped ? ' stamped' : '') + (i === 0 ? ' today' : '') + (isFuture ? ' empty' : '');
-    cell.innerHTML = `<span class="cal-num">${d.getDate()}</span>${stamped ? '⭐' : ''}`;
+    cell.innerHTML = `<span class="cal-num">${d.getDate()}</span>${stamped ? icon('star', 'icon-fill') : ''}`;
     cal.appendChild(cell);
   }
 }
@@ -717,7 +725,7 @@ function renderHeatmap() {
     html += `<div class="hm-side">${a}の<br>だん</div>`;
     STAGES.forEach((b) => {
       const lv = factLevel(`${a}-${b}`);
-      html += `<button class="hm-cell hm-${lv}" data-fact="${a}-${b}">${lv === 3 ? '★' : a * b}</button>`;
+      html += `<button class="hm-cell hm-${lv}" data-fact="${a}-${b}">${lv === 3 ? icon('star', 'icon-fill') : a * b}</button>`;
     });
   });
   $('#heatmap').innerHTML = html;
@@ -734,21 +742,21 @@ $('#heatmap').addEventListener('click', (e) => {
 });
 
 const BADGES = [
-  { id: 'first', emoji: '🌱', name: 'はじめのいっぽ', test: (t) => t.cards + t.quiz + t.pair > 0 },
-  { id: 'streak3', emoji: '🔥', name: '3日れんぞく', test: () => calcStreak() >= 3 },
-  { id: 'streak7', emoji: '🏅', name: '7日れんぞく', test: () => calcStreak() >= 7 },
-  { id: 'streak14', emoji: '🌟', name: '14日れんぞく', test: () => calcStreak() >= 14 },
-  { id: 'streak30', emoji: '👑', name: '30日れんぞく', test: () => calcStreak() >= 30 },
-  { id: 'cards100', emoji: '🃏', name: 'カード100まい', test: (t) => t.cards >= 100 },
-  { id: 'cards500', emoji: '🎴', name: 'カード500まい', test: (t) => t.cards >= 500 },
-  { id: 'quiz100', emoji: '✏️', name: 'クイズ100もん', test: (t) => t.quiz >= 100 },
-  { id: 'perfect', emoji: '💯', name: 'パーフェクト', test: (t) => t.perfect > 0 },
-  { id: 'master1', emoji: '⭐', name: 'はじめてマスター', test: () => masterCount() >= 1 },
+  { id: 'first', icon: 'leaf', name: 'はじめのいっぽ', test: (t) => t.cards + t.quiz + t.pair > 0 },
+  { id: 'streak3', icon: 'flame', name: '3日れんぞく', test: () => calcStreak() >= 3 },
+  { id: 'streak7', icon: 'flame', name: '7日れんぞく', test: () => calcStreak() >= 7 },
+  { id: 'streak14', icon: 'medal', name: '14日れんぞく', test: () => calcStreak() >= 14 },
+  { id: 'streak30', icon: 'crown', name: '30日れんぞく', test: () => calcStreak() >= 30 },
+  { id: 'cards100', icon: 'cards', name: 'カード100まい', test: (t) => t.cards >= 100 },
+  { id: 'cards500', icon: 'cards', name: 'カード500まい', test: (t) => t.cards >= 500 },
+  { id: 'quiz100', icon: 'pencil', name: 'クイズ100もん', test: (t) => t.quiz >= 100 },
+  { id: 'perfect', icon: 'circle', name: 'パーフェクト', test: (t) => t.perfect > 0 },
+  { id: 'master1', icon: 'star', name: 'はじめてマスター', test: () => masterCount() >= 1 },
   {
-    id: 'stagemaster', emoji: '🏆', name: 'だんマスター',
+    id: 'stagemaster', icon: 'trophy', name: 'だんマスター',
     test: () => STAGES.some((a) => STAGES.every((b) => factLevel(`${a}-${b}`) === 3)),
   },
-  { id: 'master81', emoji: '🌈', name: '九九マスター', test: () => masterCount() === 81 },
+  { id: 'master81', icon: 'crown', name: '九九マスター', test: () => masterCount() === 81 },
 ];
 
 function renderBadges() {
@@ -756,7 +764,7 @@ function renderBadges() {
   $('#badges').innerHTML = BADGES.map((b) => {
     const got = b.test(t);
     return `<div class="badge${got ? '' : ' locked'}">
-      <span class="badge-emoji">${b.emoji}</span>
+      <span class="badge-icon">${icon(b.icon)}</span>
       <span class="badge-name">${b.name}</span>
     </div>`;
   }).join('');
@@ -886,5 +894,5 @@ function fmtTime(sec) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-$('#btn-sound-flash').textContent = isSoundEnabled() ? '🔊' : '🔇';
+$('#btn-sound-flash').innerHTML = icon(isSoundEnabled() ? 'sound' : 'sound-off');
 renderHome();
