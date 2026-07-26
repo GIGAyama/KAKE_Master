@@ -35,6 +35,9 @@
 - Chromeなどのブラウザから **アプリとしてインストール可能**
 - Service Workerによる **オフライン動作**
 - スマートフォン・タブレット・PCのどの画面サイズでも学習領域を最大化(縦・横向き両対応)
+- **端末の「戻る」操作に対応**: 画面下部のナビゲーションバーのタップ、画面の端から中央へのスワイプ(ジェスチャー操作)で、アプリ内の1つ前の階層にもどる
+  - 「戻る」1回でアプリが終了したり、ブラウザが前のページへ移動したりしない
+  - ホーム画面で「戻る」した場合は案内を表示し、続けて2回したときだけアプリを閉じる
 
 ## 使い方(デプロイ)
 
@@ -55,7 +58,8 @@ python3 -m http.server 8000
 ## 技術構成
 
 - 依存ライブラリなし(Vanilla JS / ES Modules)・ビルド不要
-- `index.html` / `css/style.css` / `js/`(data・storage・audio・app)
+- `index.html` / `css/style.css` / `js/`(data・storage・audio・nav・app)
+- 画面遷移は History API の履歴スタックで管理(`js/nav.js`)。URLは変えないため公開パスに依存しない
 - `manifest.webmanifest` + `sw.js`(オフラインキャッシュ)
 - 学習記録は端末内の `localStorage` に保存(サーバー送信なし)
 
