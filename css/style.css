@@ -353,8 +353,10 @@ body.playing .app-header { display: none; }
   opacity: 0; transition: opacity .15s; pointer-events: none; z-index: 5; white-space: nowrap;
   display: inline-flex; align-items: center; gap: 6px;
 }
-.swipe-label-left { left: 6px; background: var(--sky-500); color: #fff; }
-.swipe-label-right { right: 6px; background: var(--green-500); color: #fff; }
+.swipe-label-left { left: 6px; }
+.swipe-label-right { right: 6px; }
+.swipe-label.tone-good { background: var(--green-500); color: #fff; }
+.swipe-label.tone-again { background: var(--rose-500); color: #fff; }
 .swipe-label.show { opacity: 1; }
 
 /* コントローラー */
@@ -368,7 +370,7 @@ body.playing .app-header { display: none; }
 .ctl-btn .icon { width: 25px; height: 25px; }
 .ctl-btn span { font-size: 12px; }
 .ctl-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--slate-200); }
-.ctl-again { color: var(--sky-500); }
+.ctl-again { color: var(--rose-500); }
 .ctl-flip { color: var(--amber-600); background: var(--amber-100); box-shadow: 0 4px 0 var(--amber-300), var(--shadow); }
 .ctl-flip:active { box-shadow: 0 1px 0 var(--amber-300); }
 .ctl-good { color: var(--green-600); }
