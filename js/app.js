@@ -7,6 +7,7 @@ import {
   calcStreak, masterCount, weakKeys,
 } from './storage.js';
 import { sfx, speak, setSoundEnabled, isSoundEnabled } from './audio.js';
+import { createNav } from './nav.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -21,17 +22,45 @@ setSoundEnabled(store.data.settings.sound);
 // ==========================================================
 // 画面遷移
 // ==========================================================
+const PLAY_SCREENS = ['flash', 'quiz', 'pair'];
+
 let activeScreen = 'home';
 
-function show(name) {
+// 画面の描画だけを行う(履歴の管理は nav にまかせる)
+function renderScreen(name) {
   activeScreen = name;
   $$('.screen').forEach((s) => s.classList.remove('active'));
   $(`#screen-${name}`).classList.add('active');
-  document.body.classList.toggle('playing', ['flash', 'quiz', 'pair'].includes(name));
+  document.body.classList.toggle('playing', PLAY_SCREENS.includes(name));
   window.scrollTo(0, 0);
   if (name === 'home') renderHome();
+  if (name === 'setup') renderSetup();
   if (name === 'records') renderRecords();
 }
+
+// 画面から出るときの片づけ(端末の「戻る」で練習を中断した場合もここを通る)
+function cleanupScreen(name) {
+  if (name === 'flash') flash = null;
+  if (name === 'quiz') { stopQuizTimer(); quiz = null; }
+  if (name === 'pair') pair = null;
+}
+
+// いまその画面を表示できるか(終わった練習は「進む」でも復元しない)
+function canShowScreen(name) {
+  if (name === 'flash') return !!flash;
+  if (name === 'quiz') return !!quiz;
+  if (name === 'pair') return !!pair;
+  return true;
+}
+
+// 端末の「戻る」(ナビゲーションバー/エッジスワイプ)とアプリの画面階層をつなぐ
+const nav = createNav({
+  root: 'home',
+  onShow: renderScreen,
+  onLeave: cleanupScreen,
+  canShow: canShowScreen,
+  onExitHint: () => toast('もう1回「もどる」で アプリを とじるよ'),
+});
 
 // ==========================================================
 // トースト
@@ -87,8 +116,7 @@ function openSetup(mode) {
   $('#panel-kana').hidden = mode !== 'flash';
   $('#panel-count').hidden = mode === 'flash';
   $('#pair-hint').hidden = mode !== 'pair';
-  renderSetup();
-  show('setup');
+  nav.push('setup');
 }
 
 function renderSetup() {
@@ -184,6 +212,14 @@ $('#btn-start').addEventListener('click', () => {
   }
 });
 
+// 練習・クイズ・対戦の画面をひらく。
+// 結果画面から「もういちど」で始めた場合は履歴を増やさずに置きかえるので、
+// 「戻る」1回で もとの階層(設定画面やホーム)にもどれる。
+function enterPlay(name) {
+  if (nav.current === 'result' || PLAY_SCREENS.includes(nav.current)) nav.replace(name);
+  else nav.push(name);
+}
+
 // ==========================================================
 // カード要素の生成
 // ==========================================================
@@ -247,7 +283,7 @@ function startFlash(deck, opts, meta = {}) {
     opts,
     meta, // { weakPractice: bool }
   };
-  show('flash');
+  enterPlay('flash');
   renderFlashStack(true);
   updateFlashProgress();
 }
@@ -420,7 +456,7 @@ function startQuiz(questions, meta = {}) {
     waiting: false,
     meta,
   };
-  show('quiz');
+  enterPlay('quiz');
   $('#btn-next-q').hidden = true;
   $('#keypad').style.visibility = 'visible';
   quiz.timer = setInterval(() => {
@@ -561,7 +597,7 @@ function startPair(deck) {
     turn: 0, // 0 = プレイヤー1, 1 = プレイヤー2
     flipped: false,
   };
-  show('pair');
+  enterPlay('pair');
   renderPair();
 }
 
@@ -664,7 +700,8 @@ function showResult({ icon: iconName, tone = '', title, stats, wrongKeys, celebr
 
   $('#btn-weak-practice').hidden = weakKeys().length === 0;
   lastRetry = retry;
-  show('result');
+  // 結果画面は練習画面と置きかえる(「戻る」で終わった練習にはもどらない)
+  nav.replace('result');
   if (celebrate) {
     sfx.fanfare();
     launchConfetti();
@@ -672,7 +709,7 @@ function showResult({ icon: iconName, tone = '', title, stats, wrongKeys, celebr
 }
 
 $('#btn-retry').addEventListener('click', () => { if (lastRetry) lastRetry(); });
-$('#btn-result-home').addEventListener('click', () => show('home'));
+$('#btn-result-home').addEventListener('click', () => quitToHome());
 $('#btn-weak-practice').addEventListener('click', startWeakPractice);
 
 function startWeakPractice() {
@@ -827,12 +864,13 @@ $$('.mode-card').forEach((b) => {
   b.addEventListener('click', () => {
     sfx.tap();
     const mode = b.dataset.mode;
-    if (mode === 'records') show('records');
+    if (mode === 'records') nav.push('records');
     else openSetup(mode);
   });
 });
 
-$$('.btn-back').forEach((b) => b.addEventListener('click', () => show(b.dataset.back)));
+// アプリ内の「もどる」ボタンも端末の「戻る」と同じ経路を通す(履歴とずれないように)
+$$('.btn-back').forEach((b) => b.addEventListener('click', () => nav.back()));
 $('#btn-brand').addEventListener('click', () => quitToHome());
 $('#btn-weak').addEventListener('click', startWeakPractice);
 
@@ -841,10 +879,12 @@ $$('[data-quit]').forEach((b) => b.addEventListener('click', quitToHome));
 function quitToHome() {
   stopQuizTimer();
   flash = null; quiz = null; pair = null;
-  show('home');
+  nav.toRoot();
 }
 
 document.addEventListener('keydown', (e) => {
+  // キーボードでも1つ前の階層にもどれるように
+  if (e.key === 'Escape') { nav.back(); return; }
   if (activeScreen === 'flash' && flash) {
     if (e.key === 'ArrowRight') flyOut(1);
     if (e.key === 'ArrowLeft') flyOut(-1);
@@ -897,4 +937,6 @@ function fmtTime(sec) {
 }
 
 $('#btn-sound-flash').innerHTML = icon(isSoundEnabled() ? 'sound' : 'sound-off');
-renderHome();
+
+// 履歴スタックを初期化してホームを表示(端末の「戻る」操作を有効にする)
+nav.start();
