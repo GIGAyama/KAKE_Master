@@ -1,7 +1,7 @@
 // ==========================================================
 // Service Worker - オフライン対応 & キャッシュ管理
 // ==========================================================
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.0.1';
 const APP_CACHE = `kuku-app-${VERSION}`;
 const FONT_CACHE = 'kuku-fonts-v1';
 

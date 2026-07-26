@@ -310,13 +310,15 @@ function commitFlash(good, animatedEl = null) {
   renderFlashStack(true);
 }
 
-function flyOut(dir) {
+// dir: カードが飛んでいく向き(-1=左 / 1=右)、good: できた!かどうか
+// 左スワイプ=できた! / 右スワイプ=もういちど
+function flyOut(dir, good = dir < 0) {
   const el = flashCurrentEl();
   if (!el || el.dataset.flying) return;
   el.dataset.flying = '1';
   el.classList.add('fly-out');
   el.style.transform = `translate(${dir * 120}vw, -6vh) rotate(${dir * 28}deg)`;
-  setTimeout(() => commitFlash(dir > 0), 260);
+  setTimeout(() => commitFlash(good), 260);
 }
 
 function finishFlash() {
@@ -360,8 +362,8 @@ function attachSwipe(el) {
     dx = e.clientX - startX;
     dy = e.clientY - startY;
     el.style.transform = `translate(${dx}px, ${dy * 0.25}px) rotate(${dx * 0.055}deg)`;
-    $('#label-again').classList.toggle('show', dx < -40);
-    $('#label-good').classList.toggle('show', dx > 40);
+    $('#label-good').classList.toggle('show', dx < -40);
+    $('#label-again').classList.toggle('show', dx > 40);
   });
 
   const release = () => {
@@ -379,8 +381,8 @@ function attachSwipe(el) {
       flipCurrent();
       return;
     }
-    if (dx > 90) { flyOut(1); return; }
-    if (dx < -90) { flyOut(-1); return; }
+    if (dx > 90) { flyOut(1, false); return; }
+    if (dx < -90) { flyOut(-1, true); return; }
     // もとにもどす
     el.classList.add('snap-back');
     el.style.transform = '';
@@ -391,8 +393,8 @@ function attachSwipe(el) {
 }
 
 $('#btn-flip').addEventListener('click', flipCurrent);
-$('#btn-good').addEventListener('click', () => flyOut(1));
-$('#btn-again').addEventListener('click', () => flyOut(-1));
+$('#btn-good').addEventListener('click', () => flyOut(-1, true));
+$('#btn-again').addEventListener('click', () => flyOut(1, false));
 $('#btn-sound-flash').addEventListener('click', () => {
   const on = !isSoundEnabled();
   setSoundEnabled(on);
