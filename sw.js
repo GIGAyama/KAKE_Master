@@ -1,9 +1,11 @@
 // ==========================================================
 // Service Worker - オフライン対応 & キャッシュ管理
 // ==========================================================
-const VERSION = 'v1.1.0';
-const APP_CACHE = `kuku-app-${VERSION}`;
-const FONT_CACHE = 'kuku-fonts-v1';
+// VERSION は js/studySession.js の APP_VERSION と合わせる
+const VERSION = 'v1.2.0';
+const CACHE_PREFIX = 'kuku-';
+const APP_CACHE = `${CACHE_PREFIX}app-${VERSION}`;
+const FONT_CACHE = `${CACHE_PREFIX}fonts-v1`;
 
 const APP_SHELL = [
   './',
@@ -14,6 +16,9 @@ const APP_SHELL = [
   './js/data.js',
   './js/storage.js',
   './js/audio.js',
+  './js/studyLog.js',
+  './js/studySession.js',
+  './js/studyStats.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -31,7 +36,11 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        keys.filter((k) => k !== APP_CACHE && k !== FONT_CACHE).map((k) => caches.delete(k))
+        // 消すのは自アプリ(kuku-)の古いキャッシュだけ。
+        // 同じオリジンには他の学習アプリも置かれるため、それらのキャッシュには触れない。
+        keys
+          .filter((k) => k.startsWith(CACHE_PREFIX) && k !== APP_CACHE && k !== FONT_CACHE)
+          .map((k) => caches.delete(k))
       ))
       .then(() => self.clients.claim())
   );

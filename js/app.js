@@ -8,6 +8,8 @@ import {
 } from './storage.js';
 import { sfx, speak, setSoundEnabled, isSoundEnabled } from './audio.js';
 import { createNav } from './nav.js';
+import { study, factQ } from './studySession.js';
+import { loadStudyRecords, recentSummary, describeRecord } from './studyStats.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -39,10 +41,11 @@ function renderScreen(name) {
 }
 
 // 画面から出るときの片づけ(端末の「戻る」で練習を中断した場合もここを通る)
+// 記録ずみのセッションは study 側で閉じているので、ここでの abort は空ぶりする。
 function cleanupScreen(name) {
-  if (name === 'flash') flash = null;
-  if (name === 'quiz') { stopQuizTimer(); quiz = null; }
-  if (name === 'pair') pair = null;
+  if (name === 'flash') { study.abort(); flash = null; }
+  if (name === 'quiz') { study.abort(); stopQuizTimer(); quiz = null; }
+  if (name === 'pair') { study.abort(); pair = null; }
 }
 
 // いまその画面を表示できるか(終わった練習は「進む」でも復元しない)
@@ -274,6 +277,7 @@ function cardEl(card, { face = 'front', kana = true } = {}) {
 let flash = null;
 
 function startFlash(deck, opts, meta = {}) {
+  const s = store.data.settings;
   flash = {
     queue: [...deck],
     total: deck.length,
@@ -282,10 +286,24 @@ function startFlash(deck, opts, meta = {}) {
     t0: performance.now(),
     opts,
     meta, // { weakPractice: bool }
+    // 学習ログ用の条件(あとで設定を変えても、この練習の記録は始めた時の条件で残す)
+    studyMeta: {
+      stages: [...s.stages],
+      weak: !!meta.weakPractice,
+      face: opts.face,
+      order: meta.weakPractice ? 'random' : s.order,
+      kana: opts.kana,
+    },
   };
+  study.beginFlash(flash.studyMeta, distinctCards(flash.queue));
   enterPlay('flash');
   renderFlashStack(true);
   updateFlashProgress();
+}
+
+// 同じカードは山の下にもどって再出題されるため、枚数は種類で数える
+function distinctCards(cards) {
+  return new Set(cards.map((c) => c.key)).size;
 }
 
 function updateFlashProgress() {
@@ -308,6 +326,7 @@ function renderFlashStack(deal = false) {
     attachSwipe(e);
     stack.appendChild(e);
   }
+  study.question();   // このカードに かかった時間の起点
 }
 
 function flashCurrentEl() { return $('#card-stack .kcard.current'); }
@@ -323,6 +342,9 @@ function flipCurrent() {
 function commitFlash(good, animatedEl = null) {
   if (!flash || flash.queue.length === 0) return;
   const card = flash.queue.shift();
+  // こたえを見てから「できた!」にしたかどうかも残す(自己評価の確からしさが読める)
+  const peeked = !!flashCurrentEl()?.classList.contains('flipped');
+  study.answer({ q: factQ(card.key), ok: good, hint: peeked });
   recordFact(card.key, good);
   addActivity(1);
   store.data.totals.cards++;
@@ -360,6 +382,11 @@ function flyOut(dir, good = dir < 0) {
 function finishFlash() {
   const sec = Math.round((performance.now() - flash.t0) / 1000);
   const missed = [...flash.missed];
+  study.finish('completed', {
+    order: flash.studyMeta.order,
+    kana: flash.studyMeta.kana,
+    wrongItems: missed.slice(0, 100).map(factQ),
+  });
   showResult({
     icon: missed.length === 0 ? 'trophy' : 'star',
     tone: missed.length === 0 ? '' : 'tone-green',
@@ -446,6 +473,7 @@ $('#btn-sound-flash').addEventListener('click', () => {
 let quiz = null;
 
 function startQuiz(questions, meta = {}) {
+  const s = store.data.settings;
   quiz = {
     qs: questions,
     i: 0,
@@ -455,7 +483,10 @@ function startQuiz(questions, meta = {}) {
     t0: performance.now(),
     waiting: false,
     meta,
+    inputs: new Set(),   // 'numpad' | 'keyboard'(タイムの読み方が変わるので残す)
+    studyMeta: { stages: [...s.stages], weak: !!meta.weakPractice },
   };
+  study.beginQuiz(quiz.studyMeta, questions.length);
   enterPlay('quiz');
   $('#btn-next-q').hidden = true;
   $('#keypad').style.visibility = 'visible';
@@ -479,10 +510,12 @@ function renderQuiz() {
   box.textContent = quiz.input || ' ';
   box.className = 'quiz-answer-box';
   $('#quiz-feedback').innerHTML = '';
+  study.question();   // この問題に かかった時間の起点
 }
 
-function quizKey(k) {
+function quizKey(k, via = 'numpad') {
   if (!quiz || quiz.waiting) return;
+  quiz.inputs.add(via);   // テンキーとキーボードでは タイムの意味が変わる
   if (k === 'del') {
     quiz.input = quiz.input.slice(0, -1);
   } else if (k === 'ok') {
@@ -500,6 +533,8 @@ function checkQuizAnswer() {
   if (!quiz.input) return;
   const q = quiz.qs[quiz.i];
   const ok = Number(quiz.input) === q.ans;
+  // まちがえたときは こたえを表示する = 自力で解けていない(§2.10)
+  study.answer({ q: factQ(q.key), ok, hint: !ok, wrong: ok ? null : quiz.input });
   recordFact(q.key, ok);
   addActivity(1);
   store.data.totals.quiz++;
@@ -550,8 +585,9 @@ function finishQuiz() {
   const s = store.data.settings;
   const bestKey = `quiz:${s.stages.join(',')}:${total}`;
   const prev = store.data.best[bestKey];
+  const isBest = perfect && (!prev || sec < prev.time);
   let newRecord = false;
-  if (perfect && (!prev || sec < prev.time)) {
+  if (isBest) {
     store.data.best[bestKey] = { time: sec };
     newRecord = !!prev;
   }
@@ -560,6 +596,14 @@ function finishQuiz() {
 
   const wrongKeys = [...new Set(quiz.wrong)];
   const qs = quiz.qs;
+
+  study.finish('completed', {
+    input: quizInputKind(quiz.inputs),
+    bestMs: store.data.best[bestKey] ? store.data.best[bestKey].time * 1000 : null,
+    isBest,
+    wrongItems: wrongKeys.slice(0, 100).map(factQ),
+  });
+
   showResult({
     icon: perfect ? 'trophy' : quiz.correct >= total * 0.7 ? 'star' : 'target',
     tone: perfect ? '' : quiz.correct >= total * 0.7 ? 'tone-green' : 'tone-sky',
@@ -578,9 +622,18 @@ function finishQuiz() {
   quiz = null;
 }
 
+// 入力のしかた(タイムの読み方が変わるため学習ログに残す)
+function quizInputKind(inputs) {
+  const pad = inputs.has('numpad');
+  const kbd = inputs.has('keyboard');
+  if (pad && kbd) return 'mixed';
+  if (kbd) return 'keyboard';
+  return 'numpad';
+}
+
 $('#keypad').addEventListener('click', (e) => {
   const key = e.target.closest('.key');
-  if (key) quizKey(key.dataset.key);
+  if (key) quizKey(key.dataset.key, 'numpad');
 });
 $('#btn-next-q').addEventListener('click', nextQuizQuestion);
 
@@ -590,13 +643,16 @@ $('#btn-next-q').addEventListener('click', nextQuizQuestion);
 let pair = null;
 
 function startPair(deck) {
+  const s = store.data.settings;
   pair = {
     deck,
     i: 0,
     scores: [0, 0],
     turn: 0, // 0 = プレイヤー1, 1 = プレイヤー2
     flipped: false,
+    studyMeta: { stages: [...s.stages], weak: false },
   };
+  study.beginPair(pair.studyMeta, deck.length);
   enterPlay('pair');
   renderPair();
 }
@@ -632,6 +688,8 @@ function renderPair() {
 
 function judgePair(ok) {
   if (!pair || !pair.flipped) return;
+  // 相手の児童が押す判定なので、設問ごとの記録は持たせない(取り組み量だけ数える)
+  study.answer({ q: factQ(pair.deck[pair.i].key), ok });
   if (ok) {
     pair.scores[pair.turn]++;
     sfx.correct();
@@ -655,6 +713,7 @@ function finishPair() {
   const [p1, p2] = pair.scores;
   const winner = p1 === p2 ? null : p1 > p2 ? 'プレイヤー1' : 'プレイヤー2';
   const deck = pair.deck;
+  study.finish('completed', { scores: [p1, p2], winner: p1 === p2 ? null : (p1 > p2 ? 1 : 2) });
   showResult({
     icon: winner ? 'crown' : 'users',
     tone: winner ? '' : 'tone-sky',
@@ -732,6 +791,7 @@ function renderRecords() {
 
   renderCalendar();
   renderHeatmap();
+  renderStudyLog();
   renderBadges();
 
   const weak = weakKeys();
@@ -780,6 +840,48 @@ $('#heatmap').addEventListener('click', (e) => {
   speak(YOMI[a][b - 1].replace(' ', '、'));
 });
 
+// ---- 学習ログ(study.v1)の ふりかえり ----
+// 読み出しだけを行う。'study.records.v1' には書きこまない。
+function renderStudyLog() {
+  const panel = $('#panel-studylog');
+  const records = loadStudyRecords();
+  if (records.length === 0) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+
+  const w = recentSummary(records, 7);
+  const min = Math.round(w.activeMs / 60000);
+  $('#sl-week').innerHTML = [
+    { num: w.sessions, label: 'れんしゅう かいすう' },
+    { num: min > 0 ? `${min}<small>分</small>` : '1<small>分みまん</small>', label: 'がくしゅうじかん' },
+    {
+      num: w.firstTryRate === null ? '-' : `${w.firstTryRate}<small>%</small>`,
+      label: '1回目で できた',
+    },
+  ].map((s) =>
+    `<div class="sl-stat"><span class="sl-num">${s.num}</span><span class="sl-label">${s.label}</span></div>`
+  ).join('');
+
+  $('#sl-list').innerHTML = records.slice(0, 10).map((r) => {
+    const d = describeRecord(r);
+    const tagList = [
+      d.weak ? '<span class="sl-tag sl-tag-weak">にがて</span>' : '',
+      d.aborted ? '<span class="sl-tag">とちゅうまで</span>' : '',
+    ].join('');
+    const tags = tagList ? `<span class="sl-tags">${tagList}</span>` : '';
+    const score = d.scoreText
+      ? `<b>${d.scoreText}</b><small>1回目で できた</small>`
+      : `<b>${d.countText}</b><small>ふたりで</small>`;
+    return `<div class="sl-item">
+      <span class="sl-date">${d.date}</span>
+      <span class="sl-body"><b>${d.mode}</b><small>${d.unit} ・ ${d.timeText}</small>${tags}</span>
+      <span class="sl-score">${score}</span>
+    </div>`;
+  }).join('');
+}
+
 const BADGES = [
   { id: 'first', icon: 'leaf', name: 'はじめのいっぽ', test: (t) => t.cards + t.quiz + t.pair > 0 },
   { id: 'streak3', icon: 'flame', name: '3日れんぞく', test: () => calcStreak() >= 3 },
@@ -811,6 +913,8 @@ function renderBadges() {
 
 $('#btn-weak2').addEventListener('click', startWeakPractice);
 
+// リセットの対象は このアプリ固有のデータ(kuku-card-v1)だけ。
+// 複数アプリ共通の学習ログ 'study.records.v1' は消さない(未送信のログが失われるため)。
 $('#btn-reset-data').addEventListener('click', () => {
   if (confirm('きろくを ぜんぶ けしますか?(もとに もどせません)')) {
     store.reset();
@@ -878,9 +982,25 @@ $$('[data-quit]').forEach((b) => b.addEventListener('click', quitToHome));
 
 function quitToHome() {
   stopQuizTimer();
+  study.abort();   // 途中でやめた記録も残す(記録済みなら空ぶりする)
   flash = null; quiz = null; pair = null;
   nav.toRoot();
 }
+
+// タブを5分いじょう はなれて中断になったあと、そのまま学習が続く場合は、
+// のこりの分で新しいレコードを始める(中断したレコードには追記しない — §5.4)
+study.onResume(() => {
+  if (activeScreen === 'flash' && flash) {
+    const remain = distinctCards(flash.queue);
+    if (remain > 0) study.beginFlash(flash.studyMeta, remain);
+  } else if (activeScreen === 'quiz' && quiz) {
+    const remain = quiz.qs.length - quiz.i;
+    if (remain > 0) study.beginQuiz(quiz.studyMeta, remain);
+  } else if (activeScreen === 'pair' && pair) {
+    const remain = pair.deck.length - pair.i;
+    if (remain > 0) study.beginPair(pair.studyMeta, remain);
+  }
+});
 
 document.addEventListener('keydown', (e) => {
   // キーボードでも1つ前の階層にもどれるように
@@ -891,11 +1011,11 @@ document.addEventListener('keydown', (e) => {
     if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowUp') { e.preventDefault(); flipCurrent(); }
   }
   if (activeScreen === 'quiz' && quiz) {
-    if (/^[0-9]$/.test(e.key)) quizKey(e.key);
-    if (e.key === 'Backspace') quizKey('del');
+    if (/^[0-9]$/.test(e.key)) quizKey(e.key, 'keyboard');
+    if (e.key === 'Backspace') quizKey('del', 'keyboard');
     if (e.key === 'Enter') {
       if (!$('#btn-next-q').hidden) nextQuizQuestion();
-      else quizKey('ok');
+      else quizKey('ok', 'keyboard');
     }
   }
 });
