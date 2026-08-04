@@ -16,7 +16,7 @@
     "icons": "node tools/optimize-icons.mjs"
   },
   "devDependencies": {
-    "playwright": "1.49.1",
+    "playwright": "1.62.1",
     "sharp": "^0.33.5"
   },
   "devDependenciesNote": "playwright と sharp は tools/ の実測ツール専用。品質ゲート(npm run check)と npm test は依存なしで動くため、CI では入れない。"
