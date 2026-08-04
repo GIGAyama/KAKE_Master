@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.clasp.json
+.env
+.env.*
+.DS_Store
+Thumbs.db
+*.log
+
+# 実測ツールが書き出す測定結果（成果物ではない）
+/measure-*.json

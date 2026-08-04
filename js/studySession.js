@@ -13,7 +13,7 @@ import { STAGES } from './data.js';
 import { calcStreak, masterCount, weakKeys } from './storage.js';
 
 export const APP_ID = 'kuku-card';
-export const APP_VERSION = '1.2.0';
+export const APP_VERSION = '1.3.0';
 
 const GRADE = 2;                       // 九九は小学校2年の学習内容
 const ITEMS_MAX = 200;                 // §2.10。切り詰めは組み立て側で行う(§2.7)

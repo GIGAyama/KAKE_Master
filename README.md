@@ -63,10 +63,61 @@ python3 -m http.server 8000
 ## 技術構成
 
 - 依存ライブラリなし(Vanilla JS / ES Modules)・ビルド不要
-- `index.html` / `css/style.css` / `js/`(data・storage・audio・nav・app)
+- **CDN から取る実行コードは 0 バイト。** 学校のフィルタリングで外部が塞がれても起動する
+  （Google Fonts だけは外部から読むが、これは「見た目だけ」の依存で、
+  届かなくても端末側フォントに落ちて動く）
+- `index.html` / `css/style.css` / `js/`(data・storage・audio・nav・app・studyLog・studySession・studyStats)
+- `install-hook.js` … `beforeinstallprompt` の捕捉。**`<head>` の先頭で同期読み込みする**
+  （本体の `app.js` は `type="module"` で解析後に走るため、そこで待つと合図を取りこぼす）
 - 画面遷移は History API の履歴スタックで管理(`js/nav.js`)。URLは変えないため公開パスに依存しない
-- `manifest.webmanifest` + `sw.js`(オフラインキャッシュ)
+- `manifest.webmanifest` + `sw.js`(オフラインキャッシュ) + `offline.html`
 - 学習記録は端末内の `localStorage` に保存(サーバー送信なし)
+
+### CSP
+
+`index.html` に `<meta>` で入れてある。**`script-src` に `'unsafe-inline'` は足さないこと。**
+インラインの `<script>` と `onclick=` は1つも無く、そのために install-hook を外部ファイルにしている。
+
+`frame-ancestors` は `<meta>` では無視されるので書いていない。
+独自ドメインや CDN を挟むときは、そちら側で HTTP ヘッダーとして設定すること。
+
+### 公開場所
+
+`manifest.webmanifest` の `id` / `scope` / `start_url` は **`/KAKE_Master/` に固定**してある。
+`gigayama.github.io` は数十個のアプリが同一オリジンを共有しており、
+相対のままだと別アプリと取り違えられる事故が起きるため。
+
+**公開場所を変える場合は、この3つと `quality.config.json` の `repoPath` を必ず直すこと。**
+
+### リリース手順
+
+1. `js/studySession.js` の `APP_VERSION`、`sw.js` の `VERSION`、
+   `package.json` / `quality.config.json` の版を上げる（**4か所とも**。上げ忘れると更新が届かない）
+2. `npm run check` と `npm test` を通す
+3. push
+
+## 開発（検査と実測）
+
+```bash
+npm ci
+
+npm run check            # 品質ゲート（CI と同じもの）
+npm run check:self-test  # 検査そのものが動いているかを、わざと壊して確かめる
+npm test                 # 中核ロジック（九九のカード生成）のテスト
+
+# 実ブラウザでの実測（Chromium が要る）
+npm run measure:ui       # コントラスト・タップ領域・横スクロール・CSP違反・JSエラー
+npm run measure:pwa      # 登録・初回リロード・更新通知・キャッシュ・オフライン
+npm run measure:icons    # 容量・透明画素・maskable のセーフゾーン
+npm run smoke            # 全モードを実際に操作して壊れていないことを確かめる
+npm run icons            # アイコンをパレット PNG 化して軽くする
+```
+
+`measure:ui` と `smoke` はローカルの HTTP サーバーが要る（既定 `http://127.0.0.1:8000`）。
+`--base` で場所を指定できる。**`manifest` の scope に合わせて `/KAKE_Master/` の下で測ること。**
+`measure:pwa` は自分でサーバーを立てるので不要。
+
+実測の結果と、**測っていないもの**は [`AUDIT.md`](AUDIT.md) に書いてある。
 
 ## 学習ログ(study.v1)
 
@@ -92,3 +143,16 @@ GIGA山 学習アプリ群の共通スキーマ **`study.v1`** に準拠した�
 
 九九の唱え方(「ににんが し」「しちしち しじゅうく」など)は小学校教科書で
 一般的な読み方に準拠しています。
+
+## ドキュメント
+
+| ファイル | 誰向け | 中身 |
+|---|---|---|
+| `README.md` | 開発者 | 構成・CSP・公開場所・リリース手順・検査の回し方 |
+| [`MANUAL.md`](MANUAL.md) | 先生 | 使い方・インストール手順・**うまくいかないとき** |
+| [`AUDIT.md`](AUDIT.md) | 開発者 | GIGA Standard v5 の監査結果（実測値・**未計測の明示**・人間に決めてほしいこと） |
+| [`docs/study-log.md`](docs/study-log.md) | 開発者 | 学習ログ `study.v1` の仕様 |
+
+## ライセンス
+
+MIT License / Copyright (c) 2026 GIGAyama — [LICENSE](LICENSE)

@@ -3,28 +3,40 @@
   "short_name": "九九カード",
   "description": "九九の計算カードで楽しく学べる算数アプリ。カード練習・クイズ・ふたりで対戦・きろくスタンプで九九をマスターしよう!",
   "lang": "ja",
-  "start_url": "./",
-  "scope": "./",
+  "dir": "ltr",
+
+  "id": "/KAKE_Master/",
+  "start_url": "/KAKE_Master/",
+  "scope": "/KAKE_Master/",
+
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "launch_handler": { "client_mode": ["navigate-existing", "auto"] },
   "orientation": "any",
   "background_color": "#fffbeb",
-  "theme_color": "#f59e0b",
+  "theme_color": "#b45309",
   "categories": ["education", "kids"],
   "icons": [
     {
-      "src": "./icons/icon-192.png",
+      "src": "/KAKE_Master/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icons/icon-512.png",
+      "src": "/KAKE_Master/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icons/maskable-512.png",
+      "src": "/KAKE_Master/icons/maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/KAKE_Master/icons/maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
