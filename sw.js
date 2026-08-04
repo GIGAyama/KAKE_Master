@@ -1,8 +1,16 @@
 // ==========================================================
 // Service Worker - オフライン対応 & キャッシュ管理
 // ==========================================================
-// VERSION は js/studySession.js の APP_VERSION と合わせる
-const VERSION = 'v1.2.0';
+/*
+ * 【重要】activate では自アプリ以外のキャッシュを削除しない。
+ *   gigayama.github.io は複数のアプリで同一オリジンを共有しているため、
+ *   CACHE_PREFIX で始まるキャッシュだけを掃除する。
+ *   caches.keys() を全消しすると、他のアプリがオフラインで起動しなくなる。
+ *
+ * この Service Worker は localStorage を一切さわらない。
+ */
+// VERSION は js/studySession.js の APP_VERSION と合わせる（リリースごとに必ず上げる）
+const VERSION = 'v1.3.0';
 const CACHE_PREFIX = 'kuku-';
 const APP_CACHE = `${CACHE_PREFIX}app-${VERSION}`;
 const FONT_CACHE = `${CACHE_PREFIX}fonts-v1`;
@@ -10,6 +18,8 @@ const FONT_CACHE = `${CACHE_PREFIX}fonts-v1`;
 const APP_SHELL = [
   './',
   './index.html',
+  './offline.html',
+  './install-hook.js',
   './css/style.css',
   './js/app.js',
   './js/nav.js',
@@ -22,41 +32,49 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/maskable-192.png',
   './icons/maskable-512.png',
   './icons/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(APP_CACHE).then((c) => c.addAll(APP_SHELL)).then(() => self.skipWaiting())
-  );
+  e.waitUntil((async () => {
+    const cache = await caches.open(APP_CACHE);
+    // 1本でも失敗すると addAll は全体が落ちる（＝オフラインが丸ごと効かなくなる）ので、
+    // 1つずつ入れて、取れなかったものだけを飛ばす。
+    await Promise.all(APP_SHELL.map((u) =>
+      cache.add(new Request(u, { cache: 'reload' }))
+        .catch((err) => console.warn('[sw] precache skipped', u, err))));
+    // ここでは skipWaiting しない。
+    // 児童が操作している最中に画面が入れ替わると、打ちかけの答えや
+    // めくりかけのカードが消える。画面側で「さいしんに する」を押してもらってから切り替える。
+  })());
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(
-        // 消すのは自アプリ(kuku-)の古いキャッシュだけ。
-        // 同じオリジンには他の学習アプリも置かれるため、それらのキャッシュには触れない。
-        keys
-          .filter((k) => k.startsWith(CACHE_PREFIX) && k !== APP_CACHE && k !== FONT_CACHE)
-          .map((k) => caches.delete(k))
-      ))
-      .then(() => self.clients.claim())
-  );
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys
+      // 消すのは自アプリ(kuku-)の古いキャッシュだけ。
+      // 同じオリジンには他の学習アプリも置かれるため、それらのキャッシュには触れない。
+      .filter((k) => k.startsWith(CACHE_PREFIX) && k !== APP_CACHE && k !== FONT_CACHE)
+      .map((k) => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== 'GET') return;
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
 
-  // Googleフォント: stale-while-revalidate(オフラインでも表示できるように)
+  // Googleフォント: stale-while-revalidate（オフラインでも字が崩れないように）
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     e.respondWith(
       caches.open(FONT_CACHE).then(async (cache) => {
-        const cached = await cache.match(e.request);
-        const network = fetch(e.request)
-          .then((res) => { if (res.ok) cache.put(e.request, res.clone()); return res; })
+        const cached = await cache.match(req);
+        const network = fetch(req)
+          .then((res) => { if (res.ok) cache.put(req, res.clone()); return res; })
           .catch(() => cached);
         return cached || network;
       })
@@ -66,28 +84,37 @@ self.addEventListener('fetch', (e) => {
 
   if (url.origin !== location.origin) return;
 
-  // ページ遷移: ネットワーク優先、失敗時はキャッシュのindex.html
-  if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(APP_CACHE).then((c) => c.put('./index.html', copy));
-          return res;
-        })
-        .catch(() => caches.match('./index.html'))
-    );
+  // 画面遷移は network-first。更新をすぐ届け、
+  // 圏外ならキャッシュの index.html、それも無ければ offline.html を出す。
+  if (req.mode === 'navigate') {
+    e.respondWith((async () => {
+      try {
+        const res = await fetch(req);
+        const copy = res.clone();
+        caches.open(APP_CACHE).then((c) => c.put('./index.html', copy));
+        return res;
+      } catch {
+        return (await caches.match('./index.html'))
+            || (await caches.match('./offline.html'))
+            || Response.error();
+      }
+    })());
     return;
   }
 
-  // 静的アセット: キャッシュ優先、裏で更新
+  // 静的ファイルは cache-first（校内Wi-Fiが混んでいても即表示）
   e.respondWith(
     caches.open(APP_CACHE).then(async (cache) => {
-      const cached = await cache.match(e.request);
-      const network = fetch(e.request)
-        .then((res) => { if (res.ok) cache.put(e.request, res.clone()); return res; })
+      const cached = await cache.match(req);
+      const network = fetch(req)
+        .then((res) => { if (res.ok) cache.put(req, res.clone()); return res; })
         .catch(() => cached);
       return cached || network;
     })
   );
+});
+
+// 画面側で「さいしんに する」が押されたときだけ切り替える
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });

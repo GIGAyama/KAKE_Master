@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>いま インターネットに つながっていません - 九九カード</title>
+  <!--
+    この画面は「ネットにつながらず、アプリ本体も手元にない」ときに出る。
+    だから外部の資産にも JavaScript にも一切頼らない。
+    CSS も文字も自前で持ち、読み込み直しは <a href> で行う
+    （インラインの onclick は CSP に引っかかるうえ、JS が死んでいると動かない）。
+  -->
+  <style>
+    :root {
+      --amber-50: #fffbeb;
+      --amber-100: #fef3c7;
+      --amber-300: #fcd34d;
+      --amber-700: #b45309;
+      --amber-800: #92400e;
+      --amber-900: #78350f;
+      --ink: #1e293b;
+      --ink-sub: #475569;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      /* アプリ本体と同じ配色・同じフォント指定。
+         Web フォントは取りに行かない（つながっていないので当然届かない）。 */
+      font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'BIZ UDGothic',
+                   'Yu Gothic', system-ui, sans-serif;
+      background: linear-gradient(180deg, var(--amber-50), #fff7e6 60%, var(--amber-50));
+      color: var(--ink);
+      min-height: 100dvh;
+      display: flex; align-items: center; justify-content: center;
+      padding: calc(env(safe-area-inset-top, 0px) + 24px)
+               calc(env(safe-area-inset-right, 0px) + 20px)
+               calc(env(safe-area-inset-bottom, 0px) + 24px)
+               calc(env(safe-area-inset-left, 0px) + 20px);
+      text-align: center;
+      line-height: 1.8;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+    @supports not (min-height: 100dvh) { body { min-height: 100vh; } }
+    .box {
+      background: #fff; border: 4px solid var(--amber-300); border-radius: 28px;
+      padding: 32px 24px; max-width: 420px; width: 100%;
+      box-shadow: 0 8px 24px rgba(146, 100, 13, .18);
+    }
+    .mark {
+      width: 88px; height: 88px; margin: 0 auto 16px; border-radius: 50%;
+      background: var(--amber-100); color: var(--amber-800);
+      display: grid; place-items: center;
+    }
+    .mark svg { width: 44px; height: 44px; fill: none; stroke: currentColor;
+                stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+    h1 { font-size: clamp(19px, 5vw, 23px); font-weight: 900; color: var(--amber-800); margin-bottom: 10px; }
+    p { font-size: clamp(14px, 3.6vw, 16px); font-weight: 700; color: var(--ink-sub); }
+    .again {
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-top: 22px; min-height: 44px; padding: 14px 28px; border-radius: 18px;
+      background: var(--amber-700); color: #fff; font-weight: 900;
+      font-size: clamp(16px, 4.2vw, 18px); text-decoration: none;
+      box-shadow: 0 5px 0 var(--amber-900);
+    }
+    .again:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--amber-900); }
+    .again:focus-visible { outline: 3px solid var(--amber-900); outline-offset: 3px; }
+    @media (forced-colors: active) { .again { border: 2px solid ButtonText; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="box">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M2.5 8.5a15 15 0 0 1 19 0M5.5 12a10.5 10.5 0 0 1 13 0M8.5 15.5a6 6 0 0 1 7 0" />
+        <circle cx="12" cy="19.2" r="1.1" fill="currentColor" stroke="none" />
+        <path d="M3 3l18 18" />
+      </svg>
+    </div>
+    <h1>いま インターネットに つながっていません</h1>
+    <p>ネットに つながってから、もういちど ひらいてね。</p>
+    <a class="again" href="./index.html">もういちど ひらく</a>
+  </main>
+</body>
+</html>
