@@ -1,0 +1,29 @@
+name: CI
+
+# pull_request でも動かす。push: [main] だけだと
+# PR の時点で落ちていることに気づけない。
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 依存は入れない。品質ゲートも中核ロジックのテストも Node の標準機能だけで動く。
+      # 入れると playwright がブラウザを取りに行き、CI が重く・壊れやすくなる。
+      # 実ブラウザでの実測（npm run measure:*）は手元で回す。
+      - name: 品質ゲート（Part I の検査）
+        run: npm run check
+
+      - name: 検査そのものが動いているかの確認（わざと壊して落ちること）
+        run: npm run check:self-test
+
+      - name: 中核ロジックのテスト
+        run: npm test

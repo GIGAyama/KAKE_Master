@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # このアプリ本体には実行時の依存が無い（Vanilla JS）。
+  # 監視するのは品質ゲート・実測ツール用の devDependencies と GitHub Actions だけ。
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
