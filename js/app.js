@@ -257,7 +257,7 @@ function cardEl(card, { face = 'front', kana = true } = {}) {
       <div class="kface kface-back">
         <div class="kface-top">
           <span class="ktag">こたえ</span>
-          <button class="kspeak" aria-label="よみあげ">${icon('sound')}</button>
+          <button class="kspeak tap-44" aria-label="よみあげ">${icon('sound')}</button>
         </div>
         <div class="kmain">${backMain}</div>
         <div class="kfoot">うら</div>
@@ -930,12 +930,23 @@ $('#btn-reset-data').addEventListener('click', () => {
 function launchConfetti() {
   const canvas = $('#confetti');
   const ctx2d = canvas.getContext('2d');
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-  const colors = ['#f59e0b', '#22c55e', '#0ea5e9', '#f43f5e', '#a855f7', '#fbbf24'];
+
+  // CSS上の大きさと、実際に描くピクセル数を分ける。これを入れないと
+  // Chromebook の高DPI機で紙ふぶきの角がぼやける。
+  // dpr を 2 で頭打ちにするのは、3倍端末で 9倍の面積を描くと
+  // メモリ4GBの Chromebook がタブごと落ちるため。2 あれば肉眼では十分きれい。
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = innerWidth, H = innerHeight;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);   // 以降は CSS px で描ける
+
+  const colors = ['#b45309', '#15803d', '#0284c7', '#e11d48', '#7c3aed', '#d97706'];
   const parts = Array.from({ length: 90 }, () => ({
-    x: Math.random() * canvas.width,
-    y: -20 - Math.random() * canvas.height * 0.4,
+    x: Math.random() * W,
+    y: -20 - Math.random() * H * 0.4,
     w: 7 + Math.random() * 6,
     h: 10 + Math.random() * 8,
     vy: 2.2 + Math.random() * 3,
@@ -946,7 +957,7 @@ function launchConfetti() {
   }));
   const t0 = performance.now();
   (function frame(t) {
-    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+    ctx2d.clearRect(0, 0, W, H);
     parts.forEach((p) => {
       p.x += p.vx; p.y += p.vy; p.rot += p.vr;
       ctx2d.save();
@@ -1023,26 +1034,88 @@ document.addEventListener('keydown', (e) => {
 // ==========================================================
 // PWA: Service Worker 登録 & インストール導線
 // ==========================================================
+// --- Service Worker の登録 ---
+// ⚠️ 'load' を待つだけの書き方は、もう load が済んでいると二度と呼ばれない。
+//    このファイルは type="module" なので今は load より前に走るが、
+//    登録処理を別の場所（React の effect など）へ移した瞬間に黙って壊れるため、
+//    readyState の分岐を必ず入れておく。
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => { /* オフライン非対応環境 */ });
+  const startSW = () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(watchForUpdate)
+      .catch(() => { /* オフライン非対応環境 */ });
+  };
+  if (document.readyState === 'complete') startSW();
+  else window.addEventListener('load', startSW, { once: true });
+}
+
+// --- 更新の通知（押されるまで切り替えない）---
+//
+// ⚠️ controllerchange は、はじめて開いたときにも飛んでくる。
+//    activate の clients.claim() でページが管理下に入るためである。
+//    これを素直に受けると初回訪問が必ず1回リロードされ、
+//    めくりかけのカードや打ちかけの答えが消える。
+//    見るべきは「利用者が『さいしんに する』を押したかどうか」だけ。
+let userAskedUpdate = false;
+let reloading = false;
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!userAskedUpdate || reloading) return;
+    reloading = true;
+    location.reload();
   });
 }
 
-let deferredInstall = null;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredInstall = e;
-  $('#btn-install').hidden = false;
-});
+function notifyUpdate(worker) {
+  const bar = $('#update-bar');
+  if (!bar || !bar.hidden) return;
+  bar.hidden = false;
+  $('#btn-update').onclick = () => {
+    userAskedUpdate = true;
+    bar.hidden = true;
+    worker.postMessage({ type: 'SKIP_WAITING' });
+  };
+}
+
+function watchForUpdate(registration) {
+  if (!registration) return;
+  registration.addEventListener('updatefound', () => {
+    const sw = registration.installing;
+    if (!sw) return;
+    sw.addEventListener('statechange', () => {
+      // controller が居る＝初回インストールではなく更新。
+      // 初回で通知すると「入れた直後に更新があります」と出て混乱する。
+      if (sw.state === 'installed' && navigator.serviceWorker.controller) notifyUpdate(sw);
+    });
+  });
+  // 前回のうちに入っていた場合も拾う
+  if (registration.waiting && navigator.serviceWorker.controller) notifyUpdate(registration.waiting);
+}
+
+// --- インストール導線 ---
+// 合図そのものは install-hook.js が <head> の先頭で受け取り済み。
+// ここでは「案内できるときだけ」ボタンを出す。
+// 出せないボタンを置いておくと「押しても何も起きない」と言われる。
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches
+  || navigator.standalone === true;
+
+const showInstallBtn = () => {
+  if (isStandalone()) return;
+  $('#btn-install').hidden = !window.__pwaInstallPrompt;
+};
+showInstallBtn();
+window.addEventListener('pwa-install-available', showInstallBtn);
+
 $('#btn-install').addEventListener('click', async () => {
-  if (!deferredInstall) return;
-  deferredInstall.prompt();
-  await deferredInstall.userChoice;
-  deferredInstall = null;
+  const prompt = window.__pwaInstallPrompt;
+  if (!prompt) return;
+  prompt.prompt();
+  await prompt.userChoice;
+  window.__pwaInstallPrompt = null;
   $('#btn-install').hidden = true;
 });
-window.addEventListener('appinstalled', () => {
+
+window.addEventListener('pwa-installed', () => {
   $('#btn-install').hidden = true;
   toast('インストールできたよ! ホームがめんから ひらけるよ');
 });

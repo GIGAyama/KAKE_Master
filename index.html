@@ -2,19 +2,56 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <!-- viewport-fit=cover … ノッチ／ホームバー領域まで背景を伸ばすために必須。
+       user-scalable=no は書かない。誤ズームを防ぐ効果より、見えづらい子が
+       拡大できない害のほうが大きいため。誤ズームは CSS の touch-action で防ぐ。 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="九九の計算カードで楽しく学べる算数アプリ。カード練習・クイズ・ふたりで対戦・きろくスタンプで九九をマスターしよう!" />
-  <meta name="theme-color" content="#f59e0b" />
+  <meta name="theme-color" content="#b45309" />
+  <meta name="color-scheme" content="light" />
   <title>九九カード - かけざんアプリ</title>
+
+  <!-- Content Security Policy
+       ⚠️ frame-ancestors はここ（<meta>）に書いても無視され、コンソールに警告が出るだけになる。
+          他サイトへの埋め込みを止めるには HTTP ヘッダーが必要だが、GitHub Pages では足せない。
+          独自ドメインや CDN を挟むときは、そちら側で frame-ancestors を設定すること。
+       ⚠️ script-src に 'unsafe-inline' は足さない。インラインの <script> と onclick= は
+          すべて外部ファイル／addEventListener に移し済み。足すと CSP を入れた意味が無くなる。
+       style-src の 'unsafe-inline' は、SVGスプライトなどの style 属性のために必要。 -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self';
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: blob:;
+    connect-src 'self';
+    worker-src 'self';
+    manifest-src 'self';
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+  " />
+
+  <!-- インストールの合図を「いちばん先に」受け取る。
+       Chrome は条件が揃うと即座に beforeinstallprompt を出すため、
+       本体（type="module" で後回しに実行される app.js）で待つと合図を取りこぼし、
+       通信が遅い端末で「インストール」ボタンが出なくなる。
+       CSP に 'unsafe-inline' を足さずに済むよう、インラインではなく外部ファイルにする。 -->
+  <script src="./install-hook.js"></script>
 
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <!-- apple-touch-icon には透明を含む画像を指さない。
+       iOS は透明部分を黒で埋めるため、ホーム画面でアイコンの四隅だけが黒く出る。
+       icon-192.png は角丸の外が透明なので流用しない。 -->
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="九九カード" />
 
+  <!-- Web フォントは「見た目だけ」の依存。学校のフィルタリングで届かなくても
+       CSS の font-family に端末側の日本語フォントを並べてあるので、字の形が変わるだけで動く。 -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet" />
@@ -22,6 +59,14 @@
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
+
+  <h1 class="visually-hidden">九九カード - かけざんアプリ</h1>
+
+  <!-- あたらしい版が待機したときだけ出る。押されるまで切り替えない。 -->
+  <div class="update-bar no-print" id="update-bar" role="status" hidden>
+    <span class="update-text">あたらしい ばんが あります</span>
+    <button class="update-btn" id="btn-update">さいしんに する</button>
+  </div>
 
   <!-- ===== SVGアイコンスプライト ===== -->
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -135,7 +180,7 @@
 
   <!-- ===== 共通ヘッダー ===== -->
   <header class="app-header" id="app-header">
-    <button class="brand" id="btn-brand" aria-label="ホームにもどる">
+    <button class="brand tap-44" id="btn-brand" aria-label="ホームにもどる">
       <span class="brand-icon"><svg class="icon"><use href="#i-cards"/></svg></span>
       <span class="brand-name">九九カード</span>
     </button>
@@ -187,7 +232,7 @@
     <!-- ===== 設定画面(モード共通) ===== -->
     <section class="screen" id="screen-setup">
       <div class="setup-head">
-        <button class="btn-back">もどる</button>
+        <button class="btn-back tap-44">もどる</button>
         <h2 class="setup-title" id="setup-title">カードでれんしゅう</h2>
       </div>
 
@@ -195,8 +240,8 @@
         <div class="panel-label">れんしゅうする「だん」をえらんでね <small>(いくつでも えらべるよ)</small></div>
         <div class="stage-grid" id="stage-grid"></div>
         <div class="stage-tools">
-          <button class="btn-mini" id="btn-all-stages">ぜんぶえらぶ</button>
-          <button class="btn-mini" id="btn-clear-stages">1つにする</button>
+          <button class="btn-mini tap-44" id="btn-all-stages">ぜんぶえらぶ</button>
+          <button class="btn-mini tap-44" id="btn-clear-stages">1つにする</button>
         </div>
       </div>
 
@@ -231,7 +276,7 @@
           <div class="panel-label" style="margin:0">となえかた(ふりがな)</div>
           <small class="panel-sub">こたえのカードに「にさんが ろく」とひょうじ</small>
         </div>
-        <button class="toggle" id="toggle-kana" role="switch" aria-checked="true" aria-label="ふりがな表示"><span class="knob"></span></button>
+        <button class="toggle tap-44" id="toggle-kana" role="switch" aria-checked="true" aria-label="ふりがな表示"><span class="knob"></span></button>
       </div>
 
       <div class="pair-hint" id="pair-hint" hidden>
@@ -250,12 +295,12 @@
     <!-- ===== カード練習画面 ===== -->
     <section class="screen screen-play" id="screen-flash">
       <div class="play-top">
-        <button class="btn-close" data-quit aria-label="やめる"><svg class="icon"><use href="#i-x"/></svg></button>
+        <button class="btn-close tap-44" data-quit aria-label="やめる"><svg class="icon"><use href="#i-x"/></svg></button>
         <div class="play-progress">
           <div class="progress-text" id="flash-progress-text"></div>
           <div class="progress-bar"><div class="progress-fill" id="flash-progress-fill"></div></div>
         </div>
-        <button class="btn-sound" id="btn-sound-flash" aria-label="おと"><svg class="icon"><use href="#i-sound"/></svg></button>
+        <button class="btn-sound tap-44" id="btn-sound-flash" aria-label="おと"><svg class="icon"><use href="#i-sound"/></svg></button>
       </div>
 
       <div class="card-arena" id="card-arena">
@@ -276,7 +321,7 @@
     <!-- ===== クイズ画面 ===== -->
     <section class="screen screen-play" id="screen-quiz">
       <div class="play-top">
-        <button class="btn-close" data-quit aria-label="やめる"><svg class="icon"><use href="#i-x"/></svg></button>
+        <button class="btn-close tap-44" data-quit aria-label="やめる"><svg class="icon"><use href="#i-x"/></svg></button>
         <div class="play-progress">
           <div class="progress-text" id="quiz-progress-text"></div>
           <div class="progress-bar"><div class="progress-fill" id="quiz-progress-fill"></div></div>
@@ -288,7 +333,7 @@
         <div class="quiz-problem-wrap">
           <div class="quiz-problem" id="quiz-problem">2 × 3 = ?</div>
           <div class="quiz-answer-box" id="quiz-answer-box">&nbsp;</div>
-          <div class="quiz-feedback" id="quiz-feedback"></div>
+          <div class="quiz-feedback" id="quiz-feedback" aria-live="polite"></div>
         </div>
 
         <div class="keypad" id="keypad">
@@ -312,7 +357,7 @@
     <!-- ===== ふたりで対戦画面 ===== -->
     <section class="screen screen-play" id="screen-pair">
       <div class="play-top">
-        <button class="btn-close" data-quit aria-label="やめる"><svg class="icon"><use href="#i-x"/></svg></button>
+        <button class="btn-close tap-44" data-quit aria-label="やめる"><svg class="icon"><use href="#i-x"/></svg></button>
         <div class="pair-scores">
           <div class="pair-score pair-p1" id="pair-score-1"><span class="pp-dot pp-dot-1"></span><span class="pp-name">プレイヤー1</span><b class="pp-pts" id="pair-pts-1">0</b></div>
           <div class="pair-score pair-p2" id="pair-score-2"><span class="pp-dot pp-dot-2"></span><span class="pp-name">プレイヤー2</span><b class="pp-pts" id="pair-pts-2">0</b></div>
@@ -358,7 +403,7 @@
     <!-- ===== きろく画面 ===== -->
     <section class="screen" id="screen-records">
       <div class="setup-head">
-        <button class="btn-back">もどる</button>
+        <button class="btn-back tap-44">もどる</button>
         <h2 class="setup-title">きろく・スタンプ</h2>
       </div>
 
@@ -376,14 +421,19 @@
 
       <div class="panel">
         <div class="panel-label"><svg class="icon"><use href="#i-grid"/></svg> 九九マスターマップ <small>(みどり=マスター!)</small></div>
-        <div class="heatmap" id="heatmap"></div>
+        <!-- 81マスは 320px 幅だと1マス 22px にしかならず、タップ領域 44px を満たせない。
+             マス自体を 44px 以上にして、狭い画面ではこの枠の中だけ横に流す。
+             （ページ全体に横スクロールを出さないための入れ子スクロール） -->
+        <div class="heatmap-scroll">
+          <div class="heatmap" id="heatmap"></div>
+        </div>
         <div class="heat-legend">
           <span><i class="hl hl-0"></i>まだ</span>
           <span><i class="hl hl-1"></i>れんしゅうちゅう</span>
           <span><i class="hl hl-2"></i>もうすこし</span>
           <span><i class="hl hl-3"></i>マスター!</span>
         </div>
-        <div class="heat-detail" id="heat-detail"></div>
+        <div class="heat-detail" id="heat-detail" aria-live="polite"></div>
       </div>
 
       <!-- 学習ログ(study.v1)の ふりかえり。記録があるときだけ表示する -->
