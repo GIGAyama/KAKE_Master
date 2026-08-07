@@ -3,7 +3,7 @@
 **対象** 九九カード(`/KAKE_Master/`)
 **出力スキーマ** `study.v1`
 **共通モジュール版** `studyLog.js` ロジック版 1.1
-**アプリ版** `1.2.0`(`js/studySession.js` の `APP_VERSION`。`sw.js` の `VERSION` も同じ値に合わせる)
+**アプリ版** `1.3.0`(`js/studySession.js` の `APP_VERSION`。`sw.js` の `VERSION` も同じ値に合わせる)
 
 このアプリは「学習ログ共通スキーマ仕様書 `study.v1`(1.5)」に準拠し、
 学習の記録を端末の `localStorage` に保存する。**外部への送信は一切行わない。**
