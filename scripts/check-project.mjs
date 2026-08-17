@@ -100,8 +100,10 @@ const BREAKS = [
     edit: (s) => s.replace(/const VERSION = 'v[\d.]+';/, "const VERSION = 'v0.0.1';") },
   { id: 'E_SW_REGISTER_READYSTATE', file: 'js/app.js',
     edit: (s) => s.replace(/document\.readyState === 'complete'/, 'false') },
+  // "./" は独自ドメインでの正しい値なので、もう壊れた形ではない。
+  // いまの壊れ方は、サブドメイン直下で配信するのにリポジトリ名の絶対パスが残っていること。
   { id: 'E_MANIFEST_ID', file: 'manifest.webmanifest',
-    edit: (s) => s.replace('"id": "/KAKE_Master/"', '"id": "./"') },
+    edit: (s) => s.replace('"id": "./"', '"id": "/KAKE_Master/"') },
   { id: 'E_INSTALL_HOOK_EXTERNAL', file: 'index.html',
     edit: (s) => s.replace('<script src="./install-hook.js"></script>', '') },
   { id: 'D_TAP44', file: 'css/style.css',

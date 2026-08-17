@@ -10,7 +10,7 @@
  * この Service Worker は localStorage を一切さわらない。
  */
 // VERSION は js/studySession.js の APP_VERSION と合わせる（リリースごとに必ず上げる）
-const VERSION = 'v1.3.0';
+const VERSION = 'v1.3.1';
 const CACHE_PREFIX = 'kuku-';
 const APP_CACHE = `${CACHE_PREFIX}app-${VERSION}`;
 const FONT_CACHE = `${CACHE_PREFIX}fonts-v1`;

@@ -5,9 +5,9 @@
   "lang": "ja",
   "dir": "ltr",
 
-  "id": "/KAKE_Master/",
-  "start_url": "/KAKE_Master/",
-  "scope": "/KAKE_Master/",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
 
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "minimal-ui"],

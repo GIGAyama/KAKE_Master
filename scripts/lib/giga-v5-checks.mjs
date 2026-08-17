@@ -132,11 +132,16 @@ export function runGigaChecks(cfg, root = process.cwd()) {
     try { mf = JSON.parse(manifestRaw); } catch { /* 下で落とす */ }
     add('E_MANIFEST_JSON', !!mf, 'manifest.webmanifest が JSON として読めない');
     if (mf) {
-      const want = cfg.repoPath;   // 例: /KAKE_Master/
+      // 独自ドメインに移り、アプリは kake-master.giga-school.com の直下で配信される。
+      // 旧構成のサブディレクトリ配信（…github.io/KAKE_Master/）とは正しい値が違うので、
+      // 期待値は quality.config.json の repoPath に持たせてある（いまは "./"）。
+      // リポジトリ名の絶対パスに戻すと scope がページの URL を含まなくなり、
+      // manifest ごと無視されて PWA としてインストールできなくなる。
+      const want = cfg.repoPath;   // 例: "./"（独自ドメイン）／"/KAKE_Master/"（旧構成）
       for (const k of ['id', 'start_url', 'scope']) {
         add(`E_MANIFEST_${k.toUpperCase()}`, mf[k] === want,
             `manifest の ${k} が「${want}」でない（実際: ${mf[k]}）。` +
-            '同一オリジンを数十個のアプリで共有しているため、相対のままだと別アプリと取り違えられる');
+            '配信場所と食いちがうと、インストールできなくなったり別アプリと取り違えられたりする');
       }
       const purposes = (mf.icons || []).map((i) => `${i.purpose}:${i.sizes}`);
       for (const need of ['any:192x192', 'any:512x512', 'maskable:192x192', 'maskable:512x512']) {
