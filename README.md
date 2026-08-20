@@ -143,6 +143,11 @@ python3 -m http.server 8000
 実際にこの形で壊れた。`npm run check` の `E_ICON_SRC` と
 `npm run measure:pwa` の `E11` が、いまはそれを止める。
 
+旧 `https://gigayama.github.io/KAKE_Master/` は GitHub Pages が新しいアドレスへ
+転送するので、古いブックマークからも開ける。
+ただし **オリジンが変わるため、旧アドレスに保存されていた記録は引き継がれない**
+（`docs/study-log.md` §12）。
+
 ### リリース手順
 
 1. `js/studySession.js` の `APP_VERSION`、`sw.js` の `VERSION`、

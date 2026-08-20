@@ -1,9 +1,9 @@
 # 学習ログ(study.v1)— 九九カードの実装
 
-**対象** 九九カード(`/KAKE_Master/`)
+**対象** 九九カード(`https://kake-master.giga-school.com/`)
 **出力スキーマ** `study.v1`
 **共通モジュール版** `studyLog.js` ロジック版 1.1
-**アプリ版** `1.3.0`(`js/studySession.js` の `APP_VERSION`。`sw.js` の `VERSION` も同じ値に合わせる)
+**アプリ版** `1.4.0`(`js/studySession.js` の `APP_VERSION`。`sw.js` の `VERSION` も同じ値に合わせる)
 
 このアプリは「学習ログ共通スキーマ仕様書 `study.v1`(1.5)」に準拠し、
 学習の記録を端末の `localStorage` に保存する。**外部への送信は一切行わない。**
@@ -20,6 +20,7 @@
 | `js/studyStats.js` | 読み出しと集計(きろく画面の表示用) | 同上。**読み出し専用** |
 
 保存キーは全アプリ共通の **`study.records.v1`**。
+ただし **キーが共通なだけで、保存先はアプリごとに別々になった**（下の §12）。
 このアプリ固有のデータ(`kuku-card-v1`)とは別枠であり、
 「きろくをぜんぶけす」でも `study.records.v1` は削除しない(§1.2)。
 
@@ -29,7 +30,7 @@
 
 | appId | アプリ | パス |
 |---|---|---|
-| `kuku-card` | 九九カード | `/KAKE_Master/` |
+| `kuku-card` | 九九カード | `https://kake-master.giga-school.com/` |
 
 仕様書 §3.1 の予約値に **`kuku-card` を追加**すること。
 
@@ -206,3 +207,40 @@ Chromebook はメモリ不足やスリープでタブが破棄されるため、
   `objective`(クイズ)と同じ正答率として集計しないこと**
 - **`multiplayer: true` のレコードは学力指標に使わないこと**
 - `source: "weak"`(にがてカード)は母集団が偏るため、`course` と同じ土俵で比較しないこと
+
+---
+
+## 12. 独自ドメインへ移ったあとの「全アプリ共通」の意味
+
+旧構成では、すべてのアプリが `gigayama.github.io` という**ひとつのオリジン**に
+置かれていた。`localStorage` はオリジンごとに分かれるので、全アプリが
+文字どおり同じ `study.records.v1` を読み書きしており、集計ページは
+自分の `localStorage` を読むだけで横断集計ができていた。
+
+独自ドメインに移り、アプリは `kake-master.giga-school.com` のように
+**サブドメインごとに別のオリジン**になった。キー名は共通のままだが、
+**中身は共有されない。** 集計ページから見えるのは自分のオリジンの分だけになる。
+
+### 受け渡し口(`records-export.html`)
+
+そこで、集計ページ側から取りに来てもらう形にした。
+
+| ファイル | 役割 |
+|---|---|
+| `records-export.html` | 受け渡し口のページ。児童が開く画面ではない |
+| `js/records-export.js` | `study.records.v1` を読んで `postMessage` で返す |
+
+- 集計ページが**同一サイトの `iframe`** でこのページを開き、`postMessage` で問い合わせる
+- サブドメイン同士は同一サイト(eTLD+1 が `giga-school.com`)なので、
+  ブラウザの third-party ストレージ分割の対象にならず、`iframe` の中でも
+  第一者と同じ `localStorage` が見える
+- **読むだけ。書き込みも削除もしない。** 集計側の不具合でこのアプリの記録が
+  壊れることが、原理的に起きないようにしてある
+- 渡す相手は `giga-school.com` とそのサブドメインだけ。判定は
+  `tests/records-export.test.mjs` で、通してはいけない例を並べて確かめている
+
+### 旧アドレスの記録について
+
+`gigayama.github.io` に保存されていた記録は、オリジンが変わったため
+**引き継がれない。** 旧オリジンはホストごと転送されるようになっており、
+そこで JavaScript を動かして読み出す手段がない。

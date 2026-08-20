@@ -11,7 +11,7 @@
  * この Service Worker は localStorage を一切さわらない。
  */
 // VERSION は js/studySession.js の APP_VERSION と合わせる（リリースごとに必ず上げる）
-const VERSION = 'v1.3.2';
+const VERSION = 'v1.4.0';
 const CACHE_PREFIX = 'kuku-';
 const APP_CACHE = `${CACHE_PREFIX}app-${VERSION}`;
 const FONT_CACHE = `${CACHE_PREFIX}fonts-v1`;
@@ -30,6 +30,8 @@ const APP_SHELL = [
   './js/studyLog.js',
   './js/studySession.js',
   './js/studyStats.js',
+  './records-export.html',
+  './js/records-export.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -91,11 +93,28 @@ self.addEventListener('fetch', (e) => {
     e.respondWith((async () => {
       try {
         const res = await fetch(req);
-        const copy = res.clone();
-        caches.open(APP_CACHE).then((c) => c.put('./index.html', copy));
+        // ⚠️ どの画面遷移でも ./index.html として保存してはいけない。
+        //    このサイトには index.html のほかに privacy.html / terms.html /
+        //    offline.html / records-export.html がある。
+        //    それらを開いたときの応答を ./index.html に入れてしまうと、
+        //    次に圏外でアプリを開いたとき、アプリのかわりに
+        //    プライバシーポリシーや受け渡し口が出る。
+        //    保存するのは「アプリの入口そのもの」を開いたときだけにする。
+        const path = new URL(req.url).pathname;
+        const isAppRoot = path === '/' || path.endsWith('/index.html');
+        // 中身のない応答（404・リダイレクト）を入れると、
+        // 圏外のときにその中身がアプリとして出てしまう。
+        if (isAppRoot && res.ok && !res.redirected) {
+          const copy = res.clone();
+          caches.open(APP_CACHE).then((c) => c.put('./index.html', copy));
+        }
         return res;
       } catch {
-        return (await caches.match('./index.html'))
+        // 圏外。まず「開こうとした画面そのもの」を探す。
+        // これを飛ばして index.html から返すと、圏外では
+        // 利用規約を開いてもアプリが出る、という妙な動きになる。
+        return (await caches.match(req))
+            || (await caches.match('./index.html'))
             || (await caches.match('./offline.html'))
             || Response.error();
       }
