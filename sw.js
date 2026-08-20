@@ -3,14 +3,15 @@
 // ==========================================================
 /*
  * 【重要】activate では自アプリ以外のキャッシュを削除しない。
- *   gigayama.github.io は複数のアプリで同一オリジンを共有しているため、
- *   CACHE_PREFIX で始まるキャッシュだけを掃除する。
+ *   いまは kake-master.giga-school.com を単独で使っているが、
+ *   同一オリジンに他のアプリが並ぶ配置（旧 gigayama.github.io など）へ
+ *   戻したときに他アプリを巻き込むので、CACHE_PREFIX で始まるキャッシュだけを掃除する。
  *   caches.keys() を全消しすると、他のアプリがオフラインで起動しなくなる。
  *
  * この Service Worker は localStorage を一切さわらない。
  */
 // VERSION は js/studySession.js の APP_VERSION と合わせる（リリースごとに必ず上げる）
-const VERSION = 'v1.3.1';
+const VERSION = 'v1.3.2';
 const CACHE_PREFIX = 'kuku-';
 const APP_CACHE = `${CACHE_PREFIX}app-${VERSION}`;
 const FONT_CACHE = `${CACHE_PREFIX}fonts-v1`;
