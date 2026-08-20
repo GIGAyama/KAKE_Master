@@ -1,7 +1,7 @@
 /**
  * 実際に操作して、壊れていないことを確かめる。
  *
- *   node tools/smoke.mjs [--base http://127.0.0.1:8001/KAKE_Master]
+ *   node tools/smoke.mjs [--base http://127.0.0.1:8001]
  *
  * CSP はビルドも静的解析も通る。動かさないと絶対に気づけないので、
  * 画面を歩いて、押して、結果が出るところまでを機械で1周させる。
@@ -10,7 +10,9 @@
 import { chromium } from 'playwright';
 
 const arg = (n, d) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : d; };
-const BASE = arg('--base', 'http://127.0.0.1:8001/KAKE_Master');
+// 独自ドメイン（kake-master.giga-school.com）ではアプリはサイトの直下で配信される。
+// 旧構成のサブディレクトリ（/KAKE_Master）の下で測ると、本番と違う配置を測ることになる。
+const BASE = arg('--base', 'http://127.0.0.1:8001');
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2 });

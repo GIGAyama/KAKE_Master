@@ -253,7 +253,7 @@ npm test                   → 7/7 合格
 
 | 項目 | なぜ測れていないか |
 |---|---|
-| **本番（`gigayama.github.io/KAKE_Master/`）での動作** | 作業環境からこのホストへ到達できない（プロキシが遮断）。すべて手元の HTTP サーバーを `/KAKE_Master/` に見立てて測った |
+| **本番（`kake-master.giga-school.com`）での動作** | 作業環境からこのホストへ到達できない（プロキシが遮断）。すべて手元の HTTP サーバーをサイトの直下に見立てて測った。**旧構成では `/KAKE_Master/` の下に見立てて測っており、それが下記（2026-08-20）の見逃しの原因になった** |
 | **実機の Chromebook / iPad / 電子黒板** | 実機が無い。Chromium のビューポート指定と DPR=2 での測定にとどまる |
 | **iOS Safari の挙動全般** | WebKit で測っていない。`beforeinstallprompt` が無いこと・ITP の7日制限・apple-touch-icon の黒枠は、仕様に基づく対処のみ（透明画素 0.00% は実測済み） |
 | **Web フォントが届く環境での見え方** | `fonts.googleapis.com` へ到達できないため、**端末側フォント（フォールバック）での見え方だけを測った**。これは学校のフィルタリング下と同じ状態なので、むしろ本番に近い。ただし「Zen Maru Gothic が当たった状態」のコントラストは未計測（字形が変わるだけで色は変わらないため、比は同じはず） |
@@ -274,10 +274,12 @@ npm test                   → 7/7 合格
    **現状はブラウザの拡大（禁止を解除済み）と全画面で代替できる**ため、
    今回は入れず、判断を仰ぐことにした。
 
-2. **`manifest` の絶対パス化にともなう公開場所の固定。**
+2. ~~**`manifest` の絶対パス化にともなう公開場所の固定。**
    `id`/`scope`/`start_url` を `/KAKE_Master/` に固定した。
    **リポジトリ名を変えたり、独自ドメインの直下（`/`）に置いたりすると動かなくなる。**
-   公開場所を変える予定があれば教えてほしい。
+   公開場所を変える予定があれば教えてほしい。~~
+   → **解決済み。** 独自ドメイン `kake-master.giga-school.com` へ移行した。
+   ここで書いたとおりの形で実際に壊れた。経緯は下記の追記（2026-08-20）を見ること。
 
 3. **共用端末での記録の扱い。**
    記録は端末内に1人分しか持てない。1台を複数の児童が使う運用があるなら、
@@ -308,3 +310,47 @@ npm test                   → 7/7 合格
    HTML と CSS でも起きる（v5 §P4 は JS の例だけ挙げている）。判定前にコメントを落とす。
 6. **`::after` でタップ領域を広げる手は、密なグリッドには使えない。**
    隣と重なって別の要素を押してしまう。枠内スクロールに逃がすほうが安全。
+
+---
+
+## 追記：独自ドメイン移行で「インストール」ボタンが消えた（2026-08-20）
+
+**症状** `kake-master.giga-school.com` へ移したあと、ヘッダーの「インストール」ボタンが出ない。
+
+**原因** `manifest.webmanifest` の `icons[].src` だけ、旧構成の絶対パス
+`/KAKE_Master/icons/…` が残っていた。`id`/`scope`/`start_url` は `"./"` に直してあったが、
+`icons` を見落としていた。独自ドメインではアプリがサイトの直下で配信されるため、
+4枚とも `https://kake-master.giga-school.com/KAKE_Master/icons/…` を指し、**すべて 404**。
+
+Chrome は「取得できるアイコンが1枚も無い」とインストール可能と判断しないので、
+`beforeinstallprompt` が飛ばない。ボタンは `window.__pwaInstallPrompt` があるときだけ出す作りなので、
+**押しても何も起きないボタンではなく、ボタンが出ないまま**になる。
+`Page.getAppManifest` の `errors` は空、コンソールにも何も出ない。**静かに壊れる形だった。**
+
+**確かめ方（実測）** サイトの直下に見立てたローカルサーバーで開き、`icons[].src` を解決して取りに行った：
+
+```
+NG   404  /KAKE_Master/icons/icon-192.png      ->  http://127.0.0.1:PORT/KAKE_Master/icons/icon-192.png
+NG   404  /KAKE_Master/icons/icon-512.png      ->  …
+NG   404  /KAKE_Master/icons/maskable-192.png  ->  …
+NG   404  /KAKE_Master/icons/maskable-512.png  ->  …
+インストールボタン: {"exists":true,"hidden":true,"prompt":false}
+```
+
+**直したもの**
+
+| ファイル | 直した内容 |
+|---|---|
+| `manifest.webmanifest` | `icons[].src` を `./icons/…`（相対）にした |
+| `sw.js` / `quality.config.json` / `package.json` / `js/studySession.js` | 版を 1.3.2 に上げた。**上げないと、既存の利用者は `kuku-app-v1.3.1` に入った壊れた manifest を cache-first で読み続ける** |
+| `tools/measure-pwa.mjs` | 測る場所を `/KAKE_Master` の下からサイトの直下へ。あわせて **E11「manifest のアイコンが全部取れる」** を追加 |
+| `tools/smoke.mjs` | 既定の `--base` を `http://127.0.0.1:8001/KAKE_Master` から `http://127.0.0.1:8001` へ |
+| `scripts/lib/giga-v5-checks.mjs` | **`E_ICON_SRC`** を追加。`icons[].src` が配信先の実ファイルを指しているかを見る |
+
+**なぜ検査を素通りしたか** 既存の `E_ICON_*` は `purpose:sizes` の4通りが揃っているかしか見ておらず、
+`src` がどこを指すかを見ていなかった。`measure:pwa` も `/KAKE_Master` の下で測っていたため、
+本番と配置が違い、404 が再現しなかった。**検査と実測の両方が、同じ理由で見えていなかった。**
+
+**他のリポジトリにも効く知見** 配信場所を変えるときは、`id`/`scope`/`start_url` だけでなく
+**`icons[].src` を必ず一緒に見ること**。そして**実測は本番と同じ配置で行うこと**。
+サブディレクトリの下で測ると、絶対パスの取りこぼしはひとつも見つからない。

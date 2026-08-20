@@ -12,7 +12,7 @@ docs/note/
 ## 貼るまえに直してほしいところ
 
 1. **連載番号**。本文1行目のタイトルが `#◯` のままです。推測で埋めていないので、正しい番号に置きかえてください。
-2. **公開 URL**。本文の「はじめに」に `https://kake-master.giga-school.com/` と書いています。`CNAME` がこのサブドメインを指しており、`manifest.webmanifest` の `scope` も `"./"`（＝サブドメイン直下）なので、この場所で配信される前提です。撮影環境から外部へのアクセスが制限されていて、実際に開いて確かめることができませんでした。公開済みかどうかだけ、目で確かめてください。
+2. **公開 URL**。本文の「はじめに」に `https://kake-master.giga-school.com/` と書いています。`manifest.webmanifest` の `scope` が `"./"` なので、独自ドメインの直下で配信される前提です。撮影環境から外部へのアクセスが制限されていて、実際に開いて確かめることができませんでした。公開済みかどうかだけ、目で確かめてください。
 3. **教室での様子**。この記事は作者の実践記録ではないので、「使ってみたら子どもたちが〜」は一行も書いていません。実際に授業で使った話は、書き手が自分で足すところです。
 
 ## note に貼る手順
@@ -90,11 +90,11 @@ README.md に「約」で書かれている数字は使わず、コードから�
 npm i --no-save playwright
 
 # 別のターミナル、または背景で。第3引数のサブパスを省かないこと
-node <skill>/scripts/serve.mjs . 4180 /KAKE_Master/
+node <skill>/scripts/serve.mjs . 4180 /
 
 # 撮影用のシナリオを置いて走らせる
 node <skill>/scripts/capture.mjs .tmp-shots/shots.mjs \
-  --base http://127.0.0.1:4180/KAKE_Master/ --out .tmp-shots/out
+  --base http://127.0.0.1:4180/ --out .tmp-shots/out
 ```
 
 `shots.mjs` は今回使ったものを残していません（`.tmp-shots/` は納品前に消しています）。
