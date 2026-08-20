@@ -130,11 +130,18 @@ python3 -m http.server 8000
 
 ### 公開場所
 
-`manifest.webmanifest` の `id` / `scope` / `start_url` は **`/KAKE_Master/` に固定**してある。
-`gigayama.github.io` は数十個のアプリが同一オリジンを共有しており、
-相対のままだと別アプリと取り違えられる事故が起きるため。
+公開先は **`https://kake-master.giga-school.com/`**（`CNAME`）。
+独自ドメインなので、アプリはサイトの**直下**で配信される。
+`manifest.webmanifest` の `id` / `scope` / `start_url` は、これに合わせて **`"./"`** にしてある。
 
-**公開場所を変える場合は、この3つと `quality.config.json` の `repoPath` を必ず直すこと。**
+**公開場所を変える場合は、この3つと `quality.config.json` の `repoPath` に加えて、
+`icons[].src` も必ず直すこと。**
+`icons[].src` に旧構成の絶対パス（`/KAKE_Master/icons/…`）が残ると、
+アイコンが4枚とも 404 になる。Chrome は取れるアイコンが1枚も無いと
+インストール可能と判断しないので、`beforeinstallprompt` が飛ばず、
+**「インストール」ボタンが出ないまま静かに壊れる**（コンソールにも何も出ない）。
+実際にこの形で壊れた。`npm run check` の `E_ICON_SRC` と
+`npm run measure:pwa` の `E11` が、いまはそれを止める。
 
 ### リリース手順
 
@@ -161,8 +168,9 @@ npm run icons            # アイコンをパレット PNG 化して軽くする
 ```
 
 `measure:ui` と `smoke` はローカルの HTTP サーバーが要る。既定の宛先はそれぞれ
-`http://127.0.0.1:8000`（`measure:ui`）と `http://127.0.0.1:8001/KAKE_Master`（`smoke`）で、
-どちらも `--base` で変えられる。**`manifest` の scope に合わせて `/KAKE_Master/` の下で測ること。**
+`http://127.0.0.1:8000`（`measure:ui`）と `http://127.0.0.1:8001`（`smoke`）で、
+どちらも `--base` で変えられる。**`manifest` の scope に合わせて、サイトの直下で測ること。**
+サブディレクトリの下で測ると、本番と配置が違うため、絶対パスの取りこぼしを見逃す。
 `measure:pwa` と `measure:icons` はサーバー不要（`measure:pwa` は自分でサーバーを立てて自分で止める）。
 
 CI（`.github/workflows/ci.yml`）は `main` への push と**すべての Pull Request**で、

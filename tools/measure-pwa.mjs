@@ -21,7 +21,10 @@ import { readFile } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 
 const ROOT = process.cwd();
-const PREFIX = '/KAKE_Master';           // manifest の scope と同じ場所で測る
+// 独自ドメイン（kake-master.giga-school.com）ではアプリはサイトの直下で配信される。
+// manifest の scope（"./"）と同じ場所で測るため、ここも直下（プレフィックス無し）にする。
+// 旧構成のサブディレクトリ（/KAKE_Master）で測ると、icon の src が本番で 404 になっていても気づけない。
+const PREFIX = '';                       // manifest の scope と同じ場所で測る
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.png': 'image/png',
@@ -80,6 +83,27 @@ const COUNTER = () => {
   });
   ok('E9 Service Worker が登録されている', !!reg && reg.active, reg ? `scope=${reg.scope}` : '登録なし');
   ok('E8 初回訪問で勝手にリロードしない', loads === 1, `文書の読み込み ${loads} 回（1回なら正常）`);
+
+  // --- manifest のアイコンが本当に取れるか ---
+  // ⚠️ これを測っていなかったせいで、独自ドメインへ移したときに気づけなかった。
+  //    icon の src だけ旧構成の絶対パス（/KAKE_Master/icons/…）が残って4枚とも 404 になり、
+  //    Chrome がインストール可能と判断しなくなって、beforeinstallprompt が飛ばなくなった。
+  //    ＝「インストール」ボタンが出ない。コンソールには何も出ないので、取得結果を数えるしかない。
+  {
+    const mfUrl = await page.evaluate(() => document.querySelector('link[rel=manifest]')?.href || null);
+    const icons = await page.evaluate(async (u) => {
+      const mf = await fetch(u).then((r) => r.json());
+      return Promise.all((mf.icons || []).map(async (i) => {
+        const abs = new URL(i.src, u).href;
+        const status = await fetch(abs).then((r) => r.status).catch(() => 0);
+        return { src: i.src, abs, status };
+      }));
+    }, mfUrl);
+    const bad = icons.filter((i) => i.status !== 200);
+    ok('E11 manifest のアイコンが全部取れる', icons.length > 0 && bad.length === 0,
+       bad.length ? bad.map((i) => `${i.status} ${i.abs}`).join(' / ')
+                  : `${icons.length}枚とも 200（${new URL(mfUrl).pathname} 基準）`);
+  }
 
   // --- 圏外で起動するか（サーバーを本当に止める）---
   const cdp = await ctx.newCDPSession(page);

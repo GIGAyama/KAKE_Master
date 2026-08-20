@@ -10,7 +10,7 @@
 
 そこで、紙のカードの動きをそのまま残したまま、なくならないようにしたものを作りました。今回紹介するのは、タブレットや Chromebook で使える計算カードアプリ「九九カード」です。
 
-https://gigayama.github.io/KAKE_Master/
+https://kake-master.giga-school.com/
 
 インストールも登録もいりません。上のアドレスを開けば、その場ですぐ始められます。名前も出席番号も入力しません。
 
@@ -182,7 +182,7 @@ https://gigayama.github.io/KAKE_Master/
 
 つぎに、校内のフィルタリングです。許可が必要なアドレスは次の三つです。
 
-1. gigayama.github.io（アプリ本体です。ここだけは通してください）
+1. kake-master.giga-school.com（アプリ本体です。ここだけは通してください）
 2. fonts.googleapis.com（字の形のためだけに使っています）
 3. fonts.gstatic.com（同じく字の形のためです）
 

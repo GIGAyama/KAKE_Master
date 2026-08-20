@@ -104,6 +104,11 @@ const BREAKS = [
   // いまの壊れ方は、サブドメイン直下で配信するのにリポジトリ名の絶対パスが残っていること。
   { id: 'E_MANIFEST_ID', file: 'manifest.webmanifest',
     edit: (s) => s.replace('"id": "./"', '"id": "/KAKE_Master/"') },
+  // 独自ドメインへ移したとき、実際にこの形（icon の src だけ旧構成の絶対パスのまま）で
+  // 4枚とも 404 になり、インストールボタンが出なくなった。purpose と sizes は揃っていたので
+  // 旧来の E_ICON_* は素通りしている。
+  { id: 'E_ICON_SRC', file: 'manifest.webmanifest',
+    edit: (s) => s.replace(/"src": "\.\/icons\//g, '"src": "/KAKE_Master/icons/') },
   { id: 'E_INSTALL_HOOK_EXTERNAL', file: 'index.html',
     edit: (s) => s.replace('<script src="./install-hook.js"></script>', '') },
   { id: 'D_TAP44', file: 'css/style.css',

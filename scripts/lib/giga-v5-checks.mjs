@@ -147,6 +147,25 @@ export function runGigaChecks(cfg, root = process.cwd()) {
       for (const need of ['any:192x192', 'any:512x512', 'maskable:192x192', 'maskable:512x512']) {
         add(`E_ICON_${need}`, purposes.includes(need), `manifest に ${need} のアイコンが無い`);
       }
+      // ⚠️ purpose と sizes が揃っていても、src が配信先を指していなければ全部 404 になる。
+      //    実際、独自ドメインへ移したときに src だけ旧構成の絶対パス
+      //    （/KAKE_Master/icons/…）が残り、4枚とも 404 になっていた。
+      //    Chrome は「取れるアイコンが1枚も無い」とインストール可能と判断しないので、
+      //    beforeinstallprompt が飛ばず、「インストール」ボタンが出ないまま静かに壊れる。
+      //    エラーはコンソールにも出ないため、ここで止める。
+      {
+        const basePath = cfg.repoPath === './' ? '/' : cfg.repoPath;   // 配信されるときの URL パス
+        const bad = (mf.icons || []).filter((i) => {
+          const src = String(i.src || '');
+          if (/^https?:/i.test(src)) return true;                      // 外部URLは使わない
+          const urlPath = src.startsWith('/') ? src : basePath + src.replace(/^\.\//, '');
+          if (!urlPath.startsWith(basePath)) return true;              // scope の外
+          return !existsSync(join(root, urlPath.slice(basePath.length)));
+        }).map((i) => i.src);
+        add('E_ICON_SRC', bad.length === 0,
+            `manifest の icon が配信先（${basePath}）に無い: ${bad.join(', ')}。` +
+            '取れるアイコンが1枚も無いとインストールできず、ボタンも出ない');
+      }
     }
   }
   add('E_APPLE_TOUCH_ICON', /rel=["']apple-touch-icon["']/.test(html), 'apple-touch-icon が無い');
