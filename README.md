@@ -130,11 +130,18 @@ python3 -m http.server 8000
 
 ### 公開場所
 
-`manifest.webmanifest` の `id` / `scope` / `start_url` は **`/KAKE_Master/` に固定**してある。
-`gigayama.github.io` は数十個のアプリが同一オリジンを共有しており、
-相対のままだと別アプリと取り違えられる事故が起きるため。
+公開先は **<https://kake-master.giga-school.com/>**（`CNAME` で指定）。
+アプリはこのサブドメインの直下で配信されるので、`manifest.webmanifest` の
+`id` / `scope` / `start_url` は **`"./"`** にしてある。
+`icons` の `src` も同じく `./icons/…` にすること。ここだけ旧構成の
+`/KAKE_Master/…` を残すと、manifest は正しいのにアイコンが 404 になり、
+インストールだけができなくなる（`npm run check` の `E_MANIFEST_ICON_SRC` で落ちる）。
 
-**公開場所を変える場合は、この3つと `quality.config.json` の `repoPath` を必ず直すこと。**
+旧 `https://gigayama.github.io/KAKE_Master/` は GitHub Pages が
+新しいアドレスへ転送するので、古いブックマークからも開ける。
+ただし **オリジンが変わるため、旧アドレスに保存されていた記録は引き継がれない。**
+
+**公開場所を変える場合は、この4つと `quality.config.json` の `repoPath` を必ず直すこと。**
 
 ### リリース手順
 
