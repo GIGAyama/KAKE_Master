@@ -147,6 +147,24 @@ export function runGigaChecks(cfg, root = process.cwd()) {
       for (const need of ['any:192x192', 'any:512x512', 'maskable:192x192', 'maskable:512x512']) {
         add(`E_ICON_${need}`, purposes.includes(need), `manifest に ${need} のアイコンが無い`);
       }
+      // アイコンの src も配信場所に合わせる。
+      // id/start_url/scope だけ直して icons を旧構成の絶対パス（/KAKE_Master/icons/…）の
+      // まま残すと、JSON としては正しいのに実物が 404 になる。
+      // Chrome は 192/512 のアイコンを取れないアプリをインストール可能と見なさないので、
+      // 「manifest は通っているのにインストールできない」という分かりにくい壊れ方になる。
+      const badSrc = (mf.icons || [])
+        .map((i) => i.src)
+        .filter((src) => typeof src === 'string' && !src.startsWith(want));
+      add('E_MANIFEST_ICON_SRC', badSrc.length === 0,
+          `manifest の icons の src が「${want}」で始まっていない（${badSrc.join(', ')}）。` +
+          '配信場所と食いちがうとアイコンが 404 になり、インストールできなくなる');
+      // 実物があるかまで見る。パスの形だけ合っていても、ファイルが無ければ同じ結果になる。
+      const missing = (mf.icons || [])
+        .map((i) => i.src)
+        .filter((src) => typeof src === 'string' && src.startsWith('./'))
+        .filter((src) => !existsSync(join(root, src.slice(2))));
+      add('E_MANIFEST_ICON_FILES', missing.length === 0,
+          `manifest の icons が指すファイルが無い（${missing.join(', ')}）`);
     }
   }
   add('E_APPLE_TOUCH_ICON', /rel=["']apple-touch-icon["']/.test(html), 'apple-touch-icon が無い');

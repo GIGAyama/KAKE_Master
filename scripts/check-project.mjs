@@ -104,6 +104,12 @@ const BREAKS = [
   // いまの壊れ方は、サブドメイン直下で配信するのにリポジトリ名の絶対パスが残っていること。
   { id: 'E_MANIFEST_ID', file: 'manifest.webmanifest',
     edit: (s) => s.replace('"id": "./"', '"id": "/KAKE_Master/"') },
+  // 実際にこの形で残っていた。id/start_url/scope を直したときに icons を直し忘れると、
+  // manifest は通るのにアイコンが 404 になり、インストールだけができなくなる。
+  { id: 'E_MANIFEST_ICON_SRC', file: 'manifest.webmanifest',
+    edit: (s) => s.replace(/"src": "\.\/icons\//g, '"src": "/KAKE_Master/icons/') },
+  { id: 'E_MANIFEST_ICON_FILES', file: 'manifest.webmanifest',
+    edit: (s) => s.replace('"src": "./icons/icon-192.png"', '"src": "./icons/nowhere-192.png"') },
   { id: 'E_INSTALL_HOOK_EXTERNAL', file: 'index.html',
     edit: (s) => s.replace('<script src="./install-hook.js"></script>', '') },
   { id: 'D_TAP44', file: 'css/style.css',
