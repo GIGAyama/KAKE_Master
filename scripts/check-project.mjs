@@ -19,7 +19,8 @@ import { readFileSync, writeFileSync, existsSync, mkdtempSync, cpSync, rmSync } 
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { runGigaChecks } from './lib/giga-v5-checks.mjs';
+// このリポジトリ独自の検査（正本 Part I は scripts/check-standard.mjs が受け持つ）
+import { runGigaChecks } from './lib/local-checks.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const cfg = JSON.parse(readFileSync(join(ROOT, 'quality.config.json'), 'utf8'));

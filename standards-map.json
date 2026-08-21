@@ -22,6 +22,14 @@
         "app-id",
         "records-export-import"
       ]
+    },
+    {
+      "canonical": "lib/giga-v5-checks.mjs",
+      "local": "scripts/lib/giga-v5-checks.mjs"
+    },
+    {
+      "canonical": "lib/run-giga-checks.mjs",
+      "local": "scripts/check-standard.mjs"
     }
   ]
 }
