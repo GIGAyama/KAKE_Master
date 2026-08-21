@@ -10,8 +10,8 @@
  *
  * この Service Worker は localStorage を一切さわらない。
  */
-// VERSION は js/studySession.js の APP_VERSION と合わせる（リリースごとに必ず上げる）
-const VERSION = 'v1.4.0';
+// VERSION は tools/build-sw.mjs が先読み対象の中身から自動生成する。手で書き換えない。
+const VERSION = 'vef68fbf8'; /* __APP_VERSION__ */
 const CACHE_PREFIX = 'kuku-';
 const APP_CACHE = `${CACHE_PREFIX}app-${VERSION}`;
 const FONT_CACHE = `${CACHE_PREFIX}fonts-v1`;
@@ -32,6 +32,7 @@ const APP_SHELL = [
   './js/studyStats.js',
   './records-export.html',
   './js/records-export.js',
+  './js/records-hub-client.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

@@ -10,7 +10,7 @@ import { isAllowedOrigin, parseRecords } from '../js/records-export.js';
 test('giga-school.com とそのサブドメインには渡す', () => {
   for (const o of [
     'https://giga-school.com',              // 集計ページの置き場
-    'https://kake-master.giga-school.com',  // 自分自身
+    'https://kake-master.giga-school.com',  // 各アプリのサブドメイン
     'https://kanji-town.giga-school.com',
     'https://online-100square-calculation.giga-school.com',  // 長い slug
   ]) {

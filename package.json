@@ -6,7 +6,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "check": "node scripts/check-project.mjs",
+    "check": "node tools/build-sw.mjs --check && node scripts/check-project.mjs",
+    "build:sw": "node tools/build-sw.mjs",
     "check:self-test": "node scripts/check-project.mjs --self-test",
     "test": "node --test tests/*.test.mjs",
     "measure:ui": "node tools/measure-ui.mjs",
