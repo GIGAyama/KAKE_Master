@@ -3,5 +3,13 @@
   "appId": "kuku-card",
   "repoPath": "./",
   "type": "A",
-  "notes": "A型（単一HTML完結・ビルド不要・依存ライブラリなし）。repoPath は manifest の id/scope/start_url と一致させる。独自ドメイン（CNAME あり）ではアプリは kake-master.giga-school.com の直下で配信されるので相対パス \"./\"。リポジトリ名の絶対パス（旧 /KAKE_Master/）に戻すと scope がページの URL を含まなくなり、PWA としてインストールできなくなる。"
+  "notes": "A型（単一HTML完結・ビルド不要・依存ライブラリなし）。repoPath は manifest の id/scope/start_url と一致させる。独自ドメイン（CNAME あり）ではアプリは kake-master.giga-school.com の直下で配信されるので相対パス \"./\"。リポジトリ名の絶対パス（旧 /KAKE_Master/）に戻すと scope がページの URL を含まなくなり、PWA としてインストールできなくなる。",
+  "standard": {
+    "repoName": "KAKE_Master",
+    "sw": "static",
+    "allowedRemoteScripts": [
+      "^https://fonts\\.googleapis\\.com(/|$)",
+      "^https://fonts\\.gstatic\\.com(/|$)"
+    ]
+  }
 }
