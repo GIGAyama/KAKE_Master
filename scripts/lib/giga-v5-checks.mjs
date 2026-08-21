@@ -81,7 +81,14 @@ export function runGigaChecks(cfg, root = process.cwd()) {
     : '';
   add('C_NO_LS_CLEAR', !/localStorage\s*\.\s*clear\s*\(/.test(stripComments(allJs)),
       'localStorage.clear() を使っている（他アプリの学習ログまで消える）');
-  add('C_PAGEHIDE', /addEventListener\(\s*['"]pagehide['"]/.test(allJs),
+  // records-hub-client.js（正本コピー）にも pagehide があるが、あれは記録ハブへ
+  // 写しを送る合図で、このアプリ自身の確定保存ではない。混ぜると
+  // studySession.js の保存が消えても検査が通ってしまうので、除いて見る。
+  const ownJs = existsSync(jsDir)
+    ? readdirSync(jsDir).filter((f) => f.endsWith('.js') && f !== 'records-hub-client.js')
+        .map((f) => R(`js/${f}`)).join('\n')
+    : '';
+  add('C_PAGEHIDE', /addEventListener\(\s*['"]pagehide['"]/.test(ownJs),
       'pagehide での確定保存が無い（Chromebook のタブ破棄で記録が消える）');
 
   // ---------- D. 表示 ----------
@@ -195,9 +202,13 @@ export function runGigaChecks(cfg, root = process.cwd()) {
         'SKIP_WAITING メッセージの受け口が無い（更新を押しても切り替わらない）');
     add('E_SW_OFFLINE_HTML', /offline\.html/.test(swCode) && existsSync(join(root, 'offline.html')),
         'offline.html が無い、または sw.js が参照していない');
-    const v = swCode.match(/VERSION\s*=\s*['"]v?([\d.]+)['"]/);
-    add('E_SW_VERSION', !!v && v[1] === cfg.appVersion,
-        `sw.js の VERSION が quality.config.json の appVersion (${cfg.appVersion}) と一致しない（実際: ${v ? v[1] : 'なし'}）`);
+    // 版は手書きの定数ではなく、tools/build-sw.mjs が先読み対象の中身から作る
+    // （手書き運用は 2026-08-21 に全リポジトリで同時に上げ忘れる事故を起こした）。
+    // 目印コメントはコメント除去前の原文（sw）で見る。swCode では消えてしまう。
+    const v = sw.match(/const VERSION = '([^']*)'; \/\* __APP_VERSION__ \*\//);
+    add('E_SW_VERSION',
+        existsSync(join(root, 'tools/build-sw.mjs')) && !!v && v[1] !== 'v0' && v[1] !== 'dev',
+        'sw.js の版が自動生成の形（__APP_VERSION__ の目印つき・tools/build-sw.mjs あり）になっていない');
   }
   {
     const appCode = stripComments(appJs);

@@ -97,7 +97,8 @@ const BREAKS = [
   { id: 'E_SW_SKIP_WAITING_MESSAGE', file: 'sw.js',
     edit: (s) => s.replace(/SKIP_WAITING/g, 'XXX') },
   { id: 'E_SW_VERSION', file: 'sw.js',
-    edit: (s) => s.replace(/const VERSION = 'v[\d.]+';/, "const VERSION = 'v0.0.1';") },
+    // 自動生成の目印を外す＝手書き運用に戻す、が今の壊れ方
+    edit: (s) => s.replace(" /* __APP_VERSION__ */", "") },
   { id: 'E_SW_REGISTER_READYSTATE', file: 'js/app.js',
     edit: (s) => s.replace(/document\.readyState === 'complete'/, 'false') },
   // "./" は独自ドメインでの正しい値なので、もう壊れた形ではない。

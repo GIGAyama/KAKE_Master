@@ -7,8 +7,8 @@
  * 同じ 'study.records.v1' を全アプリで読み書きでき、集計ページはそれを
  * そのまま読むだけで横断集計ができていた。
  *
- * サブドメインに分かれると、kake-master.giga-school.com と
- * kanji-town.giga-school.com は別のオリジンになり、この共有は成り立たない。
+ * サブドメインに分かれると、このアプリとほかのアプリは
+ * 別のオリジンになり、この共有は成り立たない。
  *
  * そこで、集計ページ(manabi-portal)から同一サイトの iframe で開かれたときだけ、
  * このオリジンの学習ログを postMessage で渡す。
@@ -24,15 +24,13 @@ const STUDY_LOG_KEY = 'study.records.v1';
 const APP_ID = 'kuku-card';
 
 // 受け渡しを許す相手。
-// ・^ と $ で全体を縛る。前方一致にすると evil-giga-school.com.example が通る
+// ・^ と $ で全体を縛る。前方一致にすると giga-school.com.example.com が通る
 // ・サブドメイン部分は任意。giga-school.com 自身(集計ページの置き場)も許す
 const ALLOWED_ORIGIN = /^https:\/\/([a-z0-9-]+\.)?giga-school\.com$/;
 
 // 手元で確かめるとき用。http://localhost:1234 など
 const isLocal = (o) => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
 
-// 判定だけを切り出してあるのは、ここを取り違えると学習ログが
-// よそのサイトへ渡ってしまうため。tests/ から直接ためせるようにしておく。
 export function isAllowedOrigin(origin) {
   return typeof origin === 'string' && (ALLOWED_ORIGIN.test(origin) || isLocal(origin));
 }
