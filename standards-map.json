@@ -12,6 +12,14 @@
       ]
     },
     {
+      "canonical": "records/records-export.html",
+      "local": "records-export.html",
+      "normalize": [
+        "app-name",
+        "records-export-import"
+      ]
+    },
+    {
       "canonical": "records/records-hub-client.js",
       "local": "js/records-hub-client.js"
     },
