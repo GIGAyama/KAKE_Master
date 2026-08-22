@@ -15,10 +15,10 @@
  *    「ちゃんと落ちること」を確かめる。実際、この確認をしたことで
  *    検査そのものの不具合が見つかっている。
  */
-import { readFileSync, writeFileSync, existsSync, mkdtempSync, cpSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, cpSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 // このリポジトリ独自の検査（正本 Part I は scripts/check-standard.mjs が受け持つ）
 import { runGigaChecks } from './lib/local-checks.mjs';
 
@@ -26,17 +26,23 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const cfg = JSON.parse(readFileSync(join(ROOT, 'quality.config.json'), 'utf8'));
 const SELF_TEST = process.argv.includes('--self-test');
 
-/** 共有の正本があれば合成する（無くても Part I の検査だけで動く） */
+/**
+ * かつてここに、横断共有の正本 scripts/lib/project-quality.mjs を「あれば合成、
+ * 無ければ注記して素通り」で読む枝があった。外した理由（2026-08-22 に実測）:
+ *
+ *   ・その正本は一度も取り込まれず、注記だけを出しつづけていた。
+ *   ・置いても検査は1件も増えない。この枝は mod.runSharedChecks を探すが、
+ *     艦隊にある8本のコピーはどれもその名前を export していない
+ *     （6本が runQualityChecks、1本が run）。実際に置いて走らせると
+ *     **54/54 のまま注記だけが消える**——「取り込めたから安心」と
+ *     読めてしまう、いちばん悪い形だった。
+ *
+ * Part I の共通検査は scripts/check-standard.mjs が正本のまま受け持つ。
+ * 秘密の直書きは同じ正本の B_NO_SECRETS が見る（js/ と css/ を走査。
+ * js/ に Google API キーと同じ形の文字列を置くと落ちることを確かめてある）。
+ */
 async function runAll(root) {
-  let results = runGigaChecks(cfg, root);
-  const shared = join(ROOT, 'scripts/lib/project-quality.mjs');
-  if (existsSync(shared)) {
-    const mod = await import(pathToFileURL(shared).href);
-    if (typeof mod.runSharedChecks === 'function') {
-      results = results.concat(await mod.runSharedChecks(cfg, root));
-    }
-  }
-  return results;
+  return runGigaChecks(cfg, root);
 }
 
 // ---------------------------------------------------------
@@ -47,9 +53,6 @@ if (!SELF_TEST) {
   const failed = results.filter((r) => !r.ok);
   for (const r of failed) console.error(`❌ ${r.id}: ${r.msg}`);
   console.log(`\n品質ゲート: ${results.length - failed.length}/${results.length} 合格`);
-  if (!existsSync(join(ROOT, 'scripts/lib/project-quality.mjs'))) {
-    console.log('（注）横断共有の正本 scripts/lib/project-quality.mjs は未取得。Part I の検査のみ実行した。');
-  }
   process.exit(failed.length ? 1 : 0);
 }
 
