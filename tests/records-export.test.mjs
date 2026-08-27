@@ -58,6 +58,6 @@ test('記録が読めないときは空の配列を返し、集計側を落と�
 });
 
 test('読める記録はそのまま返す', () => {
-  const records = [{ schema: 'study.v1', appId: 'kuku-card', mode: 'quiz' }];
+  const records = [{ schema: 'study.v1', appId: '__APP_ID__', mode: 'quiz' }];
   assert.deepEqual(parseRecords(JSON.stringify(records)), records);
 });
