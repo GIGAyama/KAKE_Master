@@ -11,13 +11,17 @@
  * この Service Worker は localStorage を一切さわらない。
  */
 // VERSION は tools/build-sw.mjs が先読み対象の中身から自動生成する。手で書き換えない。
-const VERSION = 'v95354754'; /* __APP_VERSION__ */
+const VERSION = 'v19b9e76f'; /* __APP_VERSION__ */
 const CACHE_PREFIX = 'kuku-';
 const APP_CACHE = `${CACHE_PREFIX}app-${VERSION}`;
 const FONT_CACHE = `${CACHE_PREFIX}fonts-v1`;
 
 const APP_SHELL = [
   './',
+  // 書体そのもの（woff2）は先読みに入れない。入れると先読みが 1MB を超え、
+  // 校内 Wi-Fi で 40 台が同時に開いたときに初回表示が止まる。
+  // 画面が出れば必ず取りにいくので、その 1 回で下の実行時キャッシュに入る。
+  './fonts.css',
   './index.html',
   './offline.html',
   './install-hook.js',
