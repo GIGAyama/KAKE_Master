@@ -244,7 +244,7 @@
       <!-- ここから下は おとな向け。このアプリには フッターが 無かったので、
            ほかの アプリと 同じ クレジットの 行を ホームの いちばん下に 置く。
            紹介記事は 先生に むけて 書いて あるので、れんしゅうの 画面には 出さない。 -->
-      <p class="home-credit">© 2026 九九カード</p>
+      <p class="home-credit"><span class="home-credit__c">© 2026 九九カード</span>
       <!-- ⚠️ 行き先のリンクを手で書かないこと。中身は正本の部品
            standards/web/giga-app-links.js（配布物 web/giga-app-links.js）が
            この中に出す。文言も並びも行き先も、あちらで決まっている。
@@ -252,7 +252,7 @@
            ⚠️ data-links で「つかいかた」を外してある。このアプリにはまだ
               docs/manual/ が無く、既定のまま出すと行き止まりのリンクになる。
               マニュアルを書いたら、この属性ごと消すこと（既定は 3 つとも出る）。 -->
-      <div data-giga-links data-links="terms,privacy"></div>
+      <span data-giga-links data-links="terms,privacy"></span></p>
     </section>
 
     <!-- ===== 設定画面(モード共通) ===== -->

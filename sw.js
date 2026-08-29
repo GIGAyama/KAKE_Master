@@ -11,7 +11,7 @@
  * この Service Worker は localStorage を一切さわらない。
  */
 // VERSION は tools/build-sw.mjs が先読み対象の中身から自動生成する。手で書き換えない。
-const VERSION = 'v17fe461f'; /* __APP_VERSION__ */
+const VERSION = 'vda852067'; /* __APP_VERSION__ */
 const CACHE_PREFIX = 'kuku-';
 const APP_CACHE = `${CACHE_PREFIX}app-${VERSION}`;
 const FONT_CACHE = `${CACHE_PREFIX}fonts-v1`;
@@ -23,6 +23,10 @@ const APP_SHELL = [
   // 画面が出れば必ず取りにいくので、その 1 回で下の実行時キャッシュに入る。
   './fonts.css',
   './index.html',
+  // 利用規約・プライバシーの行き先を出す部品。並べておかないと、圏外で開いた
+  // ときだけリンクが 1 本も出ない（行き先そのものは開けなくても、どこにあるかは
+  // 見えているほうがいい）。
+  './web/giga-app-links.js',
   './offline.html',
   './install-hook.js',
   './css/style.css',
