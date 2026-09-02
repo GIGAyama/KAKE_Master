@@ -11,7 +11,7 @@
  * この Service Worker は localStorage を一切さわらない。
  */
 // VERSION は tools/build-sw.mjs が先読み対象の中身から自動生成する。手で書き換えない。
-const VERSION = 'v2e1c0c6b'; /* __APP_VERSION__ */
+const VERSION = 'v7295727e'; /* __APP_VERSION__ */
 const CACHE_PREFIX = 'kuku-';
 const APP_CACHE = `${CACHE_PREFIX}app-${VERSION}`;
 const FONT_CACHE = `${CACHE_PREFIX}fonts-v1`;
